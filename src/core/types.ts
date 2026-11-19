@@ -18,6 +18,7 @@ export type AppQuestion = {
   source: Source;
   easy: boolean;
   level?: 'normal' | 'hard';
+  label?: string; // 방송 문제 소제목(무엇을 고르는지)
 };
 
 export type AppPack = {

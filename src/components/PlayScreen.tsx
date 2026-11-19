@@ -1,0 +1,133 @@
+// 한 판 화면: 하트·진행·남은 시간, 문제, 답 입력, 정답·해설 잠깐 보기.
+import * as Haptics from 'expo-haptics';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { TYPE_LABELS } from '../core/labels';
+import { answer, beginQuestion, canSubmit, isOver, remainingMs, startRound, timeout, type Round } from '../core/round';
+import { timeLimitMs } from '../core/timing';
+import type { AnswerInput, AppQuestion } from '../core/types';
+import { C, R } from '../ui/theme';
+import { ChoiceAnswer, SpacingAnswer, TypedAnswer } from './answers';
+import { Hearts, SourceNote, TimerBar } from './bits';
+
+export const FEEDBACK_MS = 1200;
+
+type Props = { questions: AppQuestion[]; onFinish(round: Round): void; haptics?: boolean };
+
+export function PlayScreen({ questions, onFinish, haptics = true }: Props) {
+  const [round, setRound] = useState<Round>(() => startRound(questions, Date.now()));
+  const [phase, setPhase] = useState<'question' | 'feedback'>('question');
+  const [now, setNow] = useState(() => Date.now());
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finished = useRef(false);
+
+  const question = round.questions[round.index];
+  const last = round.results[round.results.length - 1];
+  const shown = phase === 'feedback' ? round.questions[round.index - 1] : question;
+
+  const next = useCallback((settled: Round) => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+    if (isOver(settled)) {
+      if (!finished.current) { finished.current = true; onFinish(settled); }
+      return;
+    }
+    setRound(beginQuestion(settled, Date.now()));
+    setPhase('question');
+  }, [onFinish]);
+
+  const settle = useCallback((settled: Round) => {
+    setRound(settled);
+    setPhase('feedback');
+    const r = settled.results[settled.results.length - 1];
+    if (haptics) {
+      Haptics.notificationAsync(r.correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error).catch(() => {});
+    }
+    advanceTimer.current = setTimeout(() => next(settled), FEEDBACK_MS);
+  }, [haptics, next]);
+
+  const submit = useCallback((input: AnswerInput) => {
+    if (phase !== 'question' || !question || !canSubmit(question, input)) return;
+    settle(answer(round, input, Date.now()));
+  }, [phase, question, round, settle]);
+
+  // 남은 시간은 실제 시각으로 계산하므로, 앱이 백그라운드에 있다 돌아와도 그만큼 줄어 있다.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 100);
+    const sub = AppState.addEventListener('change', st => { if (st === 'active') setNow(Date.now()); });
+    return () => { clearInterval(id); sub.remove(); if (advanceTimer.current) clearTimeout(advanceTimer.current); };
+  }, []);
+
+  useEffect(() => {
+    if (phase === 'question' && question && remainingMs(round, now) === 0) settle(timeout(round, now));
+  }, [now, phase, question, round, settle]);
+
+  if (!shown) return null;
+  const ratio = phase === 'question' && question ? remainingMs(round, now) / timeLimitMs(question) : 0;
+
+  return (
+    <View style={s.screen}>
+      <View style={s.top}>
+        <Hearts hearts={round.hearts} />
+        <Text style={s.progress}>{Math.min(round.index + (phase === 'question' ? 1 : 0), round.questions.length)} / {round.questions.length}</Text>
+        <Text style={s.grains}>🌾 {round.grains}</Text>
+      </View>
+      <TimerBar ratio={ratio} />
+
+      <ScrollView style={s.body} contentContainerStyle={s.bodyContent} keyboardShouldPersistTaps="handled">
+        <View style={s.typeRow}>
+          <Text style={s.type}>{shown.label ? `${TYPE_LABELS[shown.type]} · ${shown.label}` : TYPE_LABELS[shown.type]}</Text>
+          {round.streak >= 3 && phase === 'question' ? <Text style={s.streak}>🔥 {round.streak}연속</Text> : null}
+        </View>
+        <View style={s.card}>
+          <Text style={s.prompt}>{shown.prompt}</Text>
+          <SourceNote source={shown.source} />
+        </View>
+
+        {phase === 'question' && question ? (
+          <View key={question.key}>
+            {question.kind === 'choice' && <ChoiceAnswer choices={question.choices ?? []} onPick={submit} disabled={false} />}
+            {question.kind === 'typed' && <TypedAnswer chosung={question.hint?.chosung} onSubmit={submit} disabled={false} />}
+            {question.kind === 'spacing' && <SpacingAnswer syllables={question.syllables ?? []} onSubmit={submit} disabled={false} />}
+          </View>
+        ) : last ? (
+          <Pressable onPress={() => next(round)} style={[s.feedback, last.correct ? s.good : s.bad]} accessibilityRole="button">
+            <View style={s.verdictRow}>
+              <Text style={[s.verdict, { color: last.correct ? C.good : C.bad }]}>
+                {last.correct ? '정답!' : last.timedOut ? '시간 초과' : '아쉬워요'}
+              </Text>
+              {last.correct && last.grains ? <Text style={s.gain}>+{last.grains} 🌾</Text> : null}
+            </View>
+            {!last.correct && <Text style={s.answerLine}>정답: {shown.answer}</Text>}
+            {last.synonymHit && <Text style={s.explain}>비슷한 뜻이지만 여기서 찾는 말은 '{shown.answer}'입니다</Text>}
+            {shown.explain ? <Text style={s.explain} numberOfLines={4}>{shown.explain}</Text> : null}
+            <Text style={s.tapHint}>눌러서 바로 다음 문제</Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.bg, paddingHorizontal: 18, paddingTop: 12 },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  progress: { fontSize: 15, color: C.sub, fontWeight: '600' },
+  grains: { fontSize: 15, color: C.ink, fontWeight: '700' },
+  body: { flex: 1 },
+  bodyContent: { paddingVertical: 18, gap: 16 },
+  typeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  type: { flexShrink: 1, fontSize: 14, color: C.accent, fontWeight: '700' },
+  streak: { fontSize: 14, color: C.accent, fontWeight: '800' },
+  card: { backgroundColor: C.card, borderRadius: R.card, padding: 20, borderWidth: 1, borderColor: C.line },
+  prompt: { fontSize: 20, lineHeight: 30, color: C.ink, fontWeight: '600' },
+  feedback: { borderRadius: R.card, padding: 18, gap: 6 },
+  good: { backgroundColor: C.goodSoft },
+  bad: { backgroundColor: C.badSoft },
+  verdictRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  verdict: { fontSize: 22, fontWeight: '800' },
+  gain: { fontSize: 17, fontWeight: '700', color: C.grain },
+  answerLine: { fontSize: 18, color: C.ink, fontWeight: '700' },
+  explain: { fontSize: 14, lineHeight: 21, color: C.sub },
+  tapHint: { fontSize: 12, color: C.faint, marginTop: 4 },
+});
