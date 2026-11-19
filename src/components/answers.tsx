@@ -1,6 +1,6 @@
 // 문제 방식별 답 입력: 보기 고르기, 직접 입력, 띄울 자리 누르기.
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { C, R } from '../ui/theme';
 
 export function ChoiceAnswer({ choices, onPick, disabled }: { choices: string[]; onPick(c: string): void; disabled: boolean }) {
@@ -38,17 +38,31 @@ export function TypedAnswer({ chosung, onSubmit, disabled }: { chosung?: string;
 
 export function SpacingAnswer({ syllables, onSubmit, disabled }: { syllables: string[]; onSubmit(gaps: boolean[]): void; disabled: boolean }) {
   const [gaps, setGaps] = useState<boolean[]>(() => Array(Math.max(0, syllables.length - 1)).fill(false));
-  const toggle = (i: number) => setGaps(g => g.map((v, j) => (j === i ? !v : v)));
+  const widths = useRef<number[]>([]);
+  const last = syllables.length - 1;
+  const toggle = (i: number) => {
+    if (i < 0 || i >= last) return;
+    setGaps(g => g.map((v, j) => (j === i ? !v : v)));
+  };
+  // 글자 자체가 터치 칸이다. 오른쪽 절반은 뒤 자리, 왼쪽 절반은 앞 자리를 바꾼다.
+  // 칸끼리 겹치지 않으므로 좁은 문장부호 옆에서도 이웃 자리가 잘못 눌리지 않는다.
+  const pressSyllable = (i: number, x: number) => {
+    if (i === 0) return toggle(0);
+    if (i === last) return toggle(last - 1);
+    toggle(x >= (widths.current[i] ?? 0) / 2 ? i : i - 1);
+  };
   return (
     <View>
       <View style={s.syllables}>
         {syllables.map((ch, i) => (
-          <View key={i} style={s.syllableWrap}>
-            <Text style={s.syllable}>{ch}</Text>
-            {i < syllables.length - 1 ? (
-              <Pressable disabled={disabled} onPress={() => toggle(i)} hitSlop={6}
-                style={[s.gap, gaps[i] && s.gapOn]} accessibilityLabel={`${i + 1}번째 글자 뒤 띄우기`} />
-            ) : null}
+          // 글자와 그 뒤 자리를 한 묶음으로 두어, 띄운 자리가 줄 맨 앞에 홀로 오지 않게 한다.
+          <View key={i} style={s.unit}>
+            <Pressable testID={`syllable-${i}`} disabled={disabled} accessible={false} hitSlop={VSLOP}
+              onLayout={e => { widths.current[i] = e.nativeEvent.layout.width; }}
+              onPress={e => pressSyllable(i, e.nativeEvent.locationX)}>
+              <Text style={s.syllable}>{ch}</Text>
+            </Pressable>
+            {i < last ? <Gap index={i} on={gaps[i]} disabled={disabled} onPress={() => toggle(i)} /> : null}
           </View>
         ))}
       </View>
@@ -56,6 +70,28 @@ export function SpacingAnswer({ syllables, onSubmit, disabled }: { syllables: st
         <Text style={s.submitText}>확인</Text>
       </Pressable>
     </View>
+  );
+}
+
+const VSLOP = { top: 6, bottom: 6 };
+const GAP_OFF = 4;
+const GAP_ON = 22;
+
+// 자리 하나. 폭 애니메이션은 이 자리에만 걸린다(LayoutAnimation처럼 화면 전체에 번지지 않게).
+function Gap({ index, on, disabled, onPress }: { index: number; on: boolean; disabled: boolean; onPress(): void }) {
+  const width = useRef(new Animated.Value(on ? GAP_ON : GAP_OFF)).current;
+  useEffect(() => {
+    const anim = Animated.timing(width, { toValue: on ? GAP_ON : GAP_OFF, duration: 140, easing: Easing.out(Easing.quad), useNativeDriver: false });
+    anim.start();
+    return () => anim.stop();
+  }, [on, width]);
+  return (
+    <Pressable disabled={disabled} onPress={onPress} hitSlop={VSLOP} accessibilityRole="button"
+      accessibilityState={{ selected: on, disabled }} accessibilityLabel={`${index + 1}번째 글자 뒤 띄우기`}>
+      <Animated.View style={[s.gap, on && s.gapOn, { width }]}>
+        {on ? <Text style={s.gapMark}>∨</Text> : null}
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -70,9 +106,11 @@ const s = StyleSheet.create({
   submit: { backgroundColor: C.ink, borderRadius: R.button, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center', minHeight: 54 },
   submitWide: { marginTop: 16 },
   submitText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-  syllables: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
-  syllableWrap: { flexDirection: 'row', alignItems: 'center' },
-  syllable: { fontSize: 22, color: C.ink, paddingHorizontal: 1 },
-  gap: { width: 10, height: 30, marginHorizontal: 1, borderRadius: 3, backgroundColor: C.line },
-  gapOn: { width: 18, backgroundColor: C.grain },
+  syllables: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 14, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, borderRadius: R.card, paddingVertical: 18, paddingHorizontal: 18 },
+  syllable: { fontSize: 28, lineHeight: 40, color: C.ink },
+  unit: { flexDirection: 'row', alignItems: 'center' },
+  // 붙은 자리: 글자 사이 좁은 틈. 띄운 자리: 벌어지고 교정부호 ∨로 표시.
+  gap: { height: 40, borderRadius: 6, alignItems: 'center', justifyContent: 'flex-start', overflow: 'hidden' },
+  gapOn: { marginHorizontal: 3, backgroundColor: C.grainSoft, borderBottomWidth: 3, borderBottomColor: C.accent },
+  gapMark: { fontSize: 15, lineHeight: 18, fontWeight: '800', color: C.accent },
 });
