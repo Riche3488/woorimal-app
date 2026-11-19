@@ -1,4 +1,4 @@
-// 한 판 화면: 하트·진행·남은 시간, 문제, 답 입력, 정답·해설 잠깐 보기.
+// 한 판 화면: 하트·진행·남은 시간, 문제, 답 입력, 정답·해설 보기(맞히면 잠깐, 틀리면 누를 때까지).
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -49,7 +49,8 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
     if (haptics) {
       Haptics.notificationAsync(r.correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error).catch(() => {});
     }
-    advanceTimer.current = setTimeout(() => next(settled), FEEDBACK_MS);
+    // 틀리면 해설을 읽을 수 있게 자동으로 넘기지 않는다.
+    if (r.correct) advanceTimer.current = setTimeout(() => next(settled), FEEDBACK_MS);
   }, [haptics, next]);
 
   const submit = useCallback((input: AnswerInput) => {
@@ -117,8 +118,8 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
             </View>
             {!last.correct && <Text style={s.answerLine}>정답: {shown.answer}</Text>}
             {last.synonymHit && <Text style={s.explain}>비슷한 뜻이지만 여기서 찾는 말은 '{shown.answer}'입니다</Text>}
-            {shown.explain ? <Text style={s.explain} numberOfLines={4}>{shown.explain}</Text> : null}
-            <Text style={s.tapHint}>눌러서 바로 다음 문제</Text>
+            {shown.explain ? <Text style={s.explain} numberOfLines={last.correct ? 4 : undefined}>{shown.explain}</Text> : null}
+            <Text style={last.correct ? s.tapHint : s.nextHint}>{last.correct ? '눌러서 바로 다음 문제' : '눌러서 다음 문제'}</Text>
           </Pressable>
         ) : null}
       </ScrollView>
@@ -147,6 +148,7 @@ const s = StyleSheet.create({
   answerLine: { fontSize: 18, color: C.ink, fontWeight: '700' },
   explain: { fontSize: 14, lineHeight: 21, color: C.sub },
   tapHint: { fontSize: 12, color: C.faint, marginTop: 4 },
+  nextHint: { fontSize: 15, color: C.ink, fontWeight: '700', marginTop: 8, textAlign: 'center' },
   test: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.accent, borderRadius: R.card, padding: 12, gap: 8 },
   testText: { fontSize: 14, color: C.accent, fontWeight: '700' },
   testRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

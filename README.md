@@ -4,6 +4,7 @@
 
 - 설계: [docs/superpowers/specs/2026-11-19-woorimal-app-design.md](docs/superpowers/specs/2026-11-19-woorimal-app-design.md)
 - 1차 구현 계획: [docs/superpowers/plans/2026-11-19-woorimal-app.md](docs/superpowers/plans/2026-11-19-woorimal-app.md)
+- 계속하게 만드는 장치(하루 목표 3판·도토리 연속 기록 보호권·결과 화면 다음 목표 안내·틀리면 해설 읽고 넘기기): [docs/superpowers/specs/2026-11-19-retention-1.md](docs/superpowers/specs/2026-11-19-retention-1.md)
 
 ## 구조
 

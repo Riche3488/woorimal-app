@@ -30,7 +30,7 @@ test('같은 문제에 답이 두 번 들어와도 한 번만 처리하고, 남�
   const stalePick = pick!;
   await act(async () => { stalePick('오똑이'); stalePick('오똑이'); });
   expect(screen.getAllByLabelText('남은 하트')).toHaveLength(2);
-  await fireEvent.press(screen.getByText('눌러서 바로 다음 문제'));
+  await fireEvent.press(screen.getByText('눌러서 다음 문제'));
   await advance(500);
   await act(async () => { pick!('오뚝이'); });
   expect(screen.getByText('정답!')).toBeTruthy();

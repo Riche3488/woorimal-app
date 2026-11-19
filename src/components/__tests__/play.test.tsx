@@ -41,7 +41,7 @@ test('오답 3번이면 판이 끝난다', async () => {
   await render(<PlayScreen questions={qs} onFinish={onFinish} />);
   for (let i = 0; i < 3; i++) {
     await fireEvent.press(screen.getByText('오똑이'));
-    await advance(1300);
+    await fireEvent.press(screen.getByText('눌러서 다음 문제'));
   }
   expect(onFinish).toHaveBeenCalledTimes(1);
   const round = onFinish.mock.calls[0][0];
@@ -73,3 +73,21 @@ test('방송 문제는 소제목(무엇을 고르는지)을 함께 보여 준다
   expect(screen.getByText('방송 문제 · 한 단어 찾기(바른 말 고르기)')).toBeTruthy();
 });
 
+
+test('틀리면 자동으로 넘기지 않고, 해설을 끝까지 보여 준 뒤 눌러야 넘어간다', async () => {
+  const longExplain = '해설 '.repeat(200);
+  await render(<PlayScreen questions={[{ ...originalChoice, explain: longExplain }, kbsChoice]} onFinish={jest.fn()} />);
+  await fireEvent.press(screen.getByText('오똑이'));
+  await advance(10_000);
+  expect(screen.getByText('아쉬워요')).toBeTruthy();
+  expect(screen.getByText(longExplain).props.numberOfLines).toBeUndefined();
+  await fireEvent.press(screen.getByText('눌러서 다음 문제'));
+  expect(screen.getByText('바른 말은?')).toBeTruthy();
+});
+
+test('맞히면 지금처럼 잠깐 뒤 자동으로 넘어간다', async () => {
+  await render(<PlayScreen questions={[originalChoice, kbsChoice]} onFinish={jest.fn()} />);
+  await fireEvent.press(screen.getByText('오뚝이'));
+  await advance(1300);
+  expect(screen.getByText('바른 말은?')).toBeTruthy();
+});

@@ -1,10 +1,11 @@
-// 결과: 정답 수·정답률·얻은 낱알, 경험치 바, 레벨업·곳간 변화 연출, 틀린 문제 보기.
+// 결과: 정답 수·정답률·얻은 낱알, 경험치 바, 레벨업·곳간 변화 연출, 다음 목표 안내, 틀린 문제 보기.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Barn, Squirrel } from '../components/bits';
-import { barnFor, levelFor } from '../core/growth';
+import { resultNudges, todayRounds } from '../core/goals';
+import { barnFor, freezesUsed, levelFor, localDay } from '../core/growth';
 import { sourceNote } from '../core/labels';
 import { useGame } from '../state/GameProvider';
 import { C, R } from '../ui/theme';
@@ -35,6 +36,16 @@ export default function Result() {
 
   const total = lastRound.results.length;
   const correct = lastRound.results.filter(r => r.correct).length;
+  const today = localDay(new Date());
+  const used = previousSave ? freezesUsed(previousSave.streak, today) : 0;
+  const nudges = resultNudges({
+    beforeGrains: previousSave?.totalGrains ?? 0,
+    afterGrains: save.totalGrains,
+    roundGrains: lastRound.grains,
+    todayRounds: todayRounds(save.daily, today),
+    freezesUsed: used,
+    freezeEarned: (save.streak.freezes ?? 0) > (previousSave?.streak.freezes ?? 0) - used,
+  });
   const wrong = lastRound.results
     .map((r, i) => ({ r, q: lastRound.questions[i] }))
     .filter(x => !x.r.correct);
@@ -79,6 +90,11 @@ export default function Result() {
         ))}
       </ScrollView>
 
+      {nudges.length > 0 && (
+        <View style={s.nudges}>
+          {nudges.map(t => <Text key={t} style={s.nudge}>{t}</Text>)}
+        </View>
+      )}
       <View style={s.actions}>
         <Pressable onPress={() => router.replace({ pathname: '/play', params: { mode: 'normal' } })}
           style={({ pressed }) => [s.primary, pressed && s.pressed]} accessibilityRole="button">
@@ -123,6 +139,8 @@ const s = StyleSheet.create({
   wrongMine: { fontSize: 13, color: C.bad },
   wrongExplain: { fontSize: 13, color: C.sub, lineHeight: 19 },
   source: { fontSize: 11, color: C.faint, textAlign: 'right' },
+  nudges: { paddingHorizontal: 20, paddingTop: 8, gap: 2 },
+  nudge: { fontSize: 15, color: C.ink, fontWeight: '700', textAlign: 'center' },
   actions: { flexDirection: 'row', gap: 10, padding: 20, paddingTop: 8 },
   primary: { flex: 2, backgroundColor: C.ink, borderRadius: R.card, paddingVertical: 18, alignItems: 'center' },
   primaryText: { color: '#fff', fontSize: 18, fontWeight: '800' },

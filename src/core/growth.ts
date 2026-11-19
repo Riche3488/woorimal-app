@@ -20,7 +20,10 @@ export function barnFor(level: number) {
   return [...BARN_STAGES].reverse().find(s => level >= s.from) ?? BARN_STAGES[0];
 }
 
-export type Streak = { days: number; lastDay: string | null };
+// 도토리(freezes): 하루 빠져도 연속 기록을 지켜 주는 보호권. 연속 7의 배수 날마다 1개, 최대 2개.
+export const MAX_FREEZES = 2;
+export const FREEZE_EVERY = 7;
+export type Streak = { days: number; lastDay: string | null; freezes: number };
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export function localDay(date: Date): string {
@@ -33,15 +36,27 @@ function dayDiff(from: string, to: string): number {
   return Math.round((toUtc(to) - toUtc(from)) / 86_400_000);
 }
 
+// 오늘 판을 끝내면 연속을 잇느라 쓰게 될 도토리 수(못 메우면 0).
+export function freezesUsed(s: Streak, today: string): number {
+  if (!s.lastDay) return 0;
+  const missed = dayDiff(s.lastDay, today) - 1;
+  return missed >= 1 && missed <= (s.freezes ?? 0) ? missed : 0;
+}
+
 export function bumpStreak(s: Streak, today: string): Streak {
-  if (!s.lastDay) return { days: 1, lastDay: today };
+  const freezes = s.freezes ?? 0;
+  if (!s.lastDay) return { days: 1, lastDay: today, freezes };
   const diff = dayDiff(s.lastDay, today);
-  if (diff <= 0) return s;
-  return { days: diff === 1 ? s.days + 1 : 1, lastDay: today };
+  if (diff <= 0) return { ...s, freezes };
+  const used = freezesUsed(s, today);
+  if (diff > 1 && used === 0) return { days: 1, lastDay: today, freezes };
+  const days = s.days + 1;
+  const left = freezes - used;
+  return { days, lastDay: today, freezes: days % FREEZE_EVERY === 0 ? Math.min(MAX_FREEZES, left + 1) : left };
 }
 
 export function currentStreak(s: Streak, today: string): number {
   if (!s.lastDay) return 0;
   const diff = dayDiff(s.lastDay, today);
-  return diff === 0 || diff === 1 ? s.days : 0;
+  return diff === 0 || diff === 1 || freezesUsed(s, today) > 0 ? s.days : 0;
 }
