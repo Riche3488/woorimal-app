@@ -58,3 +58,22 @@ test('공유 글', () => {
     '우리말 곳간 오늘의 문제 #2\n🟩🟩🟩🟩🟩 5/5\nhttps://woorimal-contest.co.kr',
   );
 });
+
+describe('난이도와 안정성', () => {
+  test('쉬운 문제 3개를 먼저, 변별 문제 2개를 뒤에', () => {
+    for (const d of ['2026-11-19', '2026-12-01', '2027-03-15']) {
+      expect(pickChallenge(bank, d).map(q => q.easy)).toEqual([true, true, true, false, false]);
+    }
+  });
+  test('어려운 문제가 없는 유형은 쉬운 문제로 채운다', () => {
+    const allEasy = bank.map(q => ({ ...q, easy: true }));
+    expect(pickChallenge(allEasy, '2026-11-19')).toHaveLength(CHALLENGE_SIZE);
+  });
+  test('뽑히지 않은 문제가 빠지거나 늘어도 그날 문제는 그대로', () => {
+    const day = '2026-11-19';
+    const picked = pickChallenge(bank, day);
+    const keys = new Set(picked.map(q => q.key));
+    const smaller = bank.filter((q, i) => keys.has(q.key) || i % 3 !== 0);
+    expect(pickChallenge(smaller, day)).toEqual(picked);
+  });
+});
