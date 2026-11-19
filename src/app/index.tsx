@@ -10,7 +10,8 @@ import { useGame } from '../state/GameProvider';
 import { C, R } from '../ui/theme';
 
 export default function Home() {
-  const { save, reviewCount } = useGame();
+  const { save, counts } = useGame();
+  const reviewCount = counts.review;
   const lv = levelFor(save.totalGrains);
   const today = localDay(new Date());
   const streak = currentStreak(save.streak, today);

@@ -1,22 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { pickChallenge } from '../core/challenge';
 import { localDay } from '../core/growth';
-import { pickReviewRound, pickRound } from '../core/picker';
-import { reviewKeys } from '../core/progress';
+import { pickReviewRound, pickRound, pickStarredRound, pickTypeRound } from '../core/picker';
+import { notebookCounts } from '../core/progress';
 import type { Round } from '../core/round';
-import type { AppPack, AppQuestion } from '../core/types';
+import type { AppPack, AppQuestion, QuestionType } from '../core/types';
 import { loadPack, refreshPack } from '../data/pack-store';
-import { defaultSave, finishRound, loadSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
+import { defaultSave, finishRound, loadSave, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 
 export type Game = {
   pack: AppPack;
   save: SaveData;
-  reviewCount: number;
+  counts: { review: number; due: number; starred: number; mastered: number }; // 오답노트 수(due = 오늘 복습)
   lastRound: Round | null;
   lastMode: RoundMode;
   previousSave: SaveData | null; // 결과 화면에서 레벨업·곳간 변화를 비교하려고 판 직전 저장을 둔다
   startNormal(): AppQuestion[];
   startReview(): AppQuestion[];
+  startStarred(): AppQuestion[];
+  startPractice(type: QuestionType): AppQuestion[];
+  lastPracticeType: QuestionType | null;
+  toggleStar(key: string): void;
   startChallenge(): AppQuestion[]; // 오늘 날짜로 정해진 5문제
   complete(round: Round, mode?: RoundMode): void;
   updateSettings(patch: Partial<Settings>): void;
@@ -41,6 +45,7 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
   const [lastRound, setLastRound] = useState<Round | null>(null);
   const [lastMode, setLastMode] = useState<RoundMode>('normal');
   const [previousSave, setPreviousSave] = useState<SaveData | null>(null);
+  const [lastPracticeType, setLastPracticeType] = useState<QuestionType | null>(null);
   const nextPack = useRef<AppPack | null>(null);
 
   useEffect(() => {
@@ -70,17 +75,33 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
 
   const startNormal = useCallback(() => pickRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
   const startReview = useCallback(() => pickReviewRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
+  const startStarred = useCallback(() => pickStarredRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
+  const startPractice = useCallback((type: QuestionType) => {
+    setLastPracticeType(type);
+    return pickTypeRound(currentPack().questions, save.progress, type, { now: Date.now() });
+  }, [currentPack, save.progress]);
 
   const startChallenge = useCallback(() => pickChallenge(currentPack().questions, localDay(new Date())), [currentPack]);
 
+  // 함수형 갱신: 판 도중 누른 ⭐(toggleStar)가 판 결과 저장에 덮이지 않게 최신 저장 위에 쌓는다.
   const complete = useCallback((round: Round, mode: RoundMode = 'normal') => {
-    setPreviousSave(save);
-    const next = finishRound(save, round, new Date(), mode);
-    setSave(next);
+    setSave(prev => {
+      setPreviousSave(prev);
+      const next = finishRound(prev, round, new Date(), mode);
+      writeSave(next).catch(() => {});
+      return next;
+    });
     setLastRound(round);
     setLastMode(mode);
-    writeSave(next).catch(() => {});
-  }, [save]);
+  }, []);
+
+  const toggleStar = useCallback((key: string) => {
+    setSave(prev => {
+      const next = toggleStarSave(prev, key);
+      writeSave(next).catch(() => {});
+      return next;
+    });
+  }, []);
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     setSave(prev => {
@@ -100,11 +121,11 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
     setPreviousSave(null);
   }, []);
 
-  const reviewCount = useMemo(() => (pack ? reviewKeys(save.progress, pack.questions).length : 0), [pack, save.progress]);
+  const counts = useMemo(() => (pack ? notebookCounts(save.progress, pack.questions, localDay(new Date())) : { review: 0, due: 0, starred: 0, mastered: 0 }), [pack, save.progress]);
 
   if (!ready || !pack) return <>{fallback}</>;
   return (
-    <GameContext.Provider value={{ pack, save, reviewCount, lastRound, lastMode, previousSave, startNormal, startReview, startChallenge, complete, updateSettings, resetRecords }}>
+    <GameContext.Provider value={{ pack, save, counts, lastRound, lastMode, previousSave, lastPracticeType, startNormal, startReview, startStarred, startPractice, toggleStar, startChallenge, complete, updateSettings, resetRecords }}>
       {children}
     </GameContext.Provider>
   );
