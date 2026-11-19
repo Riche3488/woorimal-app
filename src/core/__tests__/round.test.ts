@@ -1,5 +1,5 @@
 import { timeLimitMs } from '../timing';
-import { startRound, answer, timeout, beginQuestion, remainingMs, isOver, grainsFor, canSubmit, ROUND_SIZE, START_HEARTS } from '../round';
+import { startRound, answer, timeout, giveUp, beginQuestion, remainingMs, isOver, grainsFor, canSubmit, ROUND_SIZE, START_HEARTS } from '../round';
 import type { AppQuestion } from '../types';
 
 const typed = (n: number): AppQuestion => ({
@@ -113,4 +113,29 @@ test('beginQuestion: 해설을 보여 준 뒤 다음 문제의 시작 시각을 
 test('startRound에 하트 수를 줄 수 있다(오늘의 문제는 끝까지 푼다)', () => {
   expect(startRound([], 0).hearts).toBe(START_HEARTS);
   expect(startRound([], 0, 5).hearts).toBe(5);
+});
+
+describe('giveUp (모르겠어요)', () => {
+  test('giveUp은 오답과 같다', () => {
+    let r = startRound([typed(1), typed(2), typed(3)], T0);
+    r = answer(r, '답1', T0 + 100);
+    r = beginQuestion(r, T0 + 200);
+    r = giveUp(r, T0 + 700);
+    expect(r).toMatchObject({ hearts: 2, streak: 0, index: 2 });
+    expect(r.results[1]).toMatchObject({ correct: false, timedOut: false, gaveUp: true, userAnswer: '', grains: 0 });
+  });
+  test('answer·timeout 결과는 gaveUp false', () => {
+    let r = startRound([typed(1), typed(2)], T0);
+    r = answer(r, '틀림', T0 + 100);
+    r = timeout(r, T0 + 100 + timeLimitMs(typed(2)) + 1);
+    expect(r.results.map(x => x.gaveUp)).toEqual([false, false]);
+  });
+  test('제한 시간이 지난 뒤의 giveUp은 시간 초과로 처리', () => {
+    const r = giveUp(startRound([typed(1)], T0), T0 + timeLimitMs(typed(1)) + 1);
+    expect(r.results[0]).toMatchObject({ timedOut: true, gaveUp: false });
+  });
+  test('giveUp은 판이 끝났으면 그대로 반환', () => {
+    const over = answer(startRound([typed(1)], T0), '답1', T0 + 100);
+    expect(giveUp(over, T0 + 200)).toBe(over);
+  });
 });

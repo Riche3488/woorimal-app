@@ -77,3 +77,7 @@ describe('난이도와 안정성', () => {
     expect(pickChallenge(smaller, day)).toEqual(picked);
   });
 });
+
+test('marksFor: 모르겠어요는 x', () => {
+  expect(marksFor([{ correct: false, timedOut: false, gaveUp: true } as RoundResult])).toBe('x');
+});

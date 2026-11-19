@@ -11,6 +11,7 @@ export type RoundResult = {
   type: string;
   correct: boolean;
   timedOut: boolean;
+  gaveUp: boolean; // '모르겠어요'
   synonymHit: boolean;
   userAnswer: string;
   elapsedMs: number;
@@ -52,13 +53,17 @@ export function canSubmit(q: AppQuestion, input: AnswerInput): boolean {
   return normalizeAnswer(input) !== '';
 }
 
-function settle(round: Round, now: number, input: AnswerInput | null): Round {
+type Settle = { kind: 'answer'; input: AnswerInput } | { kind: 'timeout' } | { kind: 'giveup' };
+
+function settle(round: Round, now: number, how: Settle): Round {
   const q = round.questions[round.index];
   if (!q || isOver(round)) return round;
   const limit = timeLimitMs(q);
   const elapsedMs = now - round.startedAt;
-  const timedOut = input === null || elapsedMs > limit;
-  const { correct, synonymHit } = timedOut ? { correct: false, synonymHit: false } : grade(q, input!);
+  const timedOut = how.kind === 'timeout' || elapsedMs > limit;
+  const gaveUp = !timedOut && how.kind === 'giveup';
+  const input = how.kind === 'answer' ? how.input : null;
+  const { correct, synonymHit } = timedOut || input === null ? { correct: false, synonymHit: false } : grade(q, input!);
   const streak = correct ? round.streak + 1 : 0;
   const grains = grainsFor(correct, Math.max(0, limit - elapsedMs) / limit, streak);
   const userAnswer = input === null ? '' : Array.isArray(input) ? gapsToSentence(q.syllables ?? [], input) : String(input).trim();
@@ -69,16 +74,21 @@ function settle(round: Round, now: number, input: AnswerInput | null): Round {
     streak,
     grains: round.grains + grains,
     startedAt: now,
-    results: [...round.results, { key: q.key, type: q.type, correct, timedOut, synonymHit, userAnswer, elapsedMs, grains }],
+    results: [...round.results, { key: q.key, type: q.type, correct, timedOut, gaveUp, synonymHit, userAnswer, elapsedMs, grains }],
   };
 }
 
 export function answer(round: Round, input: AnswerInput, now: number): Round {
-  return settle(round, now, input);
+  return settle(round, now, { kind: 'answer', input });
 }
 
 export function timeout(round: Round, now: number): Round {
-  return settle(round, now, null);
+  return settle(round, now, { kind: 'timeout' });
+}
+
+// '모르겠어요': 오답과 같게 처리한다(하트 -1, 낱알 0). 제한 시간이 지났으면 시간 초과.
+export function giveUp(round: Round, now: number): Round {
+  return settle(round, now, { kind: 'giveup' });
 }
 
 // 정답·해설을 잠깐 보여 준 뒤 다음 문제를 띄울 때 그 시각부터 제한 시간을 센다.

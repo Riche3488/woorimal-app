@@ -14,7 +14,7 @@ const bank = (): AppQuestion[] => {
   return out;
 };
 const result = (key: string, correct: boolean): RoundResult => ({
-  key, type: key.split(':')[0], correct, timedOut: false, synonymHit: false, userAnswer: '', elapsedMs: 1000, grains: correct ? 10 : 0,
+  key, type: key.split(':')[0], correct, timedOut: false, gaveUp: false, synonymHit: false, userAnswer: '', elapsedMs: 1000, grains: correct ? 10 : 0,
 });
 const seeded = (seed = 1) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 const DAY = 86_400_000;
