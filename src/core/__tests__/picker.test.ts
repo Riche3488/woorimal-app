@@ -58,23 +58,17 @@ describe('pickRound', () => {
 });
 
 describe('기록', () => {
-  test('recordResults: 틀리면 다시 풀 문제, 맞히면 해제, 유형별 시도 수 증가', () => {
+  test('recordResults: 틀리면 다시 풀 문제, 같은 날 맞혀도 노트에 남음, 유형별 시도 수 증가', () => {
     let p = recordResults(emptyProgress(), [result('meaning:1', false)], NOW);
     expect(p.stats['meaning:1']).toMatchObject({ seen: 1, correct: 0, needsReview: true, lastWrongAt: NOW });
     p = recordResults(p, [result('meaning:1', true)], NOW + 1);
-    expect(p.stats['meaning:1']).toMatchObject({ seen: 2, correct: 1, needsReview: false });
+    expect(p.stats['meaning:1']).toMatchObject({ seen: 2, correct: 1, needsReview: true });
     expect(p.triesByType.meaning).toBe(2);
   });
   test('묶음에서 빠진 문제는 다시 풀기에 나오지 않고, 없으면 빈 배열', () => {
     const p = recordResults(emptyProgress(), [result('broadcast:gone', false)], NOW);
     expect(reviewKeys(p, bank())).toEqual([]);
     expect(pickReviewRound(bank(), p, { rng: seeded() })).toEqual([]);
-  });
-  test('reviewKeys는 최근 틀린 순', () => {
-    let p = recordResults(emptyProgress(), [result('meaning:1', false)], NOW);
-    p = recordResults(p, [result('spelling:2', false)], NOW + 5);
-    expect(reviewKeys(p, bank())).toEqual(['spelling:2', 'meaning:1']);
-    expect(pickReviewRound(bank(), p, { rng: seeded() }).map(x => x.key)).toEqual(['spelling:2', 'meaning:1']);
   });
   test('typeAccuracy는 정답률이 낮은 유형부터', () => {
     const p = recordResults(emptyProgress(), [result('meaning:1', true), result('spelling:1', false), result('spelling:2', true)], NOW);

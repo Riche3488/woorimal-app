@@ -36,6 +36,11 @@ export function dayDiff(from: string, to: string): number {
   return Math.round((toUtc(to) - toUtc(from)) / 86_400_000);
 }
 
+export function addDays(day: string, n: number): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return localDay(new Date(y, m - 1, d + n));
+}
+
 // 오늘 판을 끝내면 연속을 잇느라 쓰게 될 도토리 수(못 메우면 0).
 export function freezesUsed(s: Streak, today: string): number {
   if (!s.lastDay) return 0;
