@@ -1,5 +1,6 @@
 // 웹 저장소(woorimal_contest)의 scripts/lib/app-pack.mjs가 만드는 묶음 형식.
-export type Source = 'kbs' | 'original' | 'blog';
+// adapted: 방송 문제에서 낱말만 가져와 사전 뜻풀이·새 문장으로 다시 만든 문제(웹 scripts/lib/app-adapt.mjs). KBS 출처를 붙이지 않는다.
+export type Source = 'kbs' | 'original' | 'blog' | 'adapted';
 export type QuestionType = 'meaning' | 'usage' | 'spacing' | 'spelling' | 'proverb' | 'chosung' | 'broadcast';
 export type QuestionKind = 'choice' | 'typed' | 'spacing';
 

@@ -8,7 +8,7 @@ export const APP_PACK_COMPAT = 1;
 export const MIN_SHRINK_RATIO = 0.5;
 
 const TYPES = new Set(['meaning', 'usage', 'spacing', 'spelling', 'proverb', 'chosung', 'broadcast']);
-const SOURCES = new Set(['kbs', 'original', 'blog']);
+const SOURCES = new Set(['kbs', 'original', 'blog', 'adapted']);
 
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isStrList = (v: unknown, min = 1): v is string[] => Array.isArray(v) && v.length >= min && v.every(isStr);

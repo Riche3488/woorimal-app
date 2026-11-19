@@ -24,7 +24,11 @@
 2. 웹을 배포하면 앱은 실행할 때 `https://woorimal-contest.co.kr/app/version.json`을 보고 새 묶음을 내려받는다(앱 업데이트 불필요)
 3. 앱에 내장할 묶음을 바꾸려면 이 저장소에서 `npm.cmd run sync-pack`
 
-문제마다 출처 라벨(`kbs` / `original` / `blog`)이 있고, `kbs` 문제에는 "출처: KBS 우리말 겨루기"를 작게 표시한다. KBS 문제를 앱에서 빼려면 웹 저장소 `config/app-pack.json`의 `excludeSources`에 `"kbs"`를 넣고 빌드·배포한다.
+문제마다 출처 라벨(`kbs` / `original` / `blog` / `adapted`)이 있다.
+
+- **저작권 대응(KBS 문제 재가공)**: 웹 저장소 `config/app-pack.json`의 `adaptKbs: true`(현재 켜짐)면 앱 묶음에는 방송 문장이 들어가지 않는다. 방송 문제에서는 정답 낱말만 가져오고, 문제 문장은 표준국어대사전 뜻풀이(`data/app-adapted/dict.json`)나 새로 쓴 띄어쓰기 문장(`data/app-adapted/spacing.json`)으로 다시 만든다(`adapted`). 다시 만들 수 없는 형식(번호 고르기, 대화문, 음절 조합, 보기 고르기 등)은 뺀다. 웹 공개 빌드는 그대로다. 규칙은 웹 `scripts/lib/app-adapt.mjs`에 있다.
+- `adapted` 문제에는 KBS 출처를 표시하지 않는다. 설정 화면에는 "뜻풀이: 국립국어원 표준국어대사전(CC BY-SA 2.0 KR)"을 늘 표시하고, 묶음에 `kbs` 문제가 있을 때만 KBS 출처를 함께 보인다.
+- 원격 묶음 안전장치(`src/core/pack.ts`): 형식·유형·출처·키 중복 검사, `minApp`(새 앱이 필요한 묶음) 거절, 지금 묶음보다 오래된 묶음 거절, 문제 수가 절반 아래로 줄면 거절(웹 `config/app-pack.json`의 `shrink: true`로 일부러 줄인 경우는 허용). 앱 업데이트로 내장 묶음이 더 새것이면 내려받아 둔 묶음 대신 내장 묶음을 쓴다.
 
 ## 실행과 검사
 

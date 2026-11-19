@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { creditLines } from '../core/labels';
 import { useGame } from '../state/GameProvider';
 import { C, R } from '../ui/theme';
 
@@ -50,7 +51,7 @@ export default function Settings() {
         ) : null}
         <Pressable style={s.info} onPress={() => setTaps(t => t + 1)}>
           <Text style={s.infoText}>문제 {pack.questions.length.toLocaleString()}개 · 묶음 {pack.version}</Text>
-          <Text style={s.infoText}>방송 기반 문제 출처: KBS 우리말 겨루기</Text>
+          {creditLines(pack.questions).map(line => <Text key={line} style={s.infoText}>{line}</Text>)}
         </Pressable>
       </View>
     </SafeAreaView>

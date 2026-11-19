@@ -37,6 +37,8 @@ describe('parsePack 안전장치', () => {
     expect(parsePack(badType)).toBeNull();
     const badSource = makePack() as any; badSource.questions[0].source = 'unknown';
     expect(parsePack(badSource)).toBeNull();
+    const adapted = makePack(); adapted.questions[0] = { ...adapted.questions[0], source: 'adapted' };
+    expect(parsePack(adapted)).not.toBeNull();
     const dup = makePack(); dup.questions[1] = { ...dup.questions[1], key: dup.questions[0].key };
     expect(parsePack(dup)).toBeNull();
   });

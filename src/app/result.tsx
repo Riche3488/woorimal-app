@@ -5,6 +5,7 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Barn, Squirrel } from '../components/bits';
 import { barnFor, levelFor } from '../core/growth';
+import { sourceNote } from '../core/labels';
 import { useGame } from '../state/GameProvider';
 import { C, R } from '../ui/theme';
 
@@ -73,7 +74,7 @@ export default function Result() {
             <Text style={s.wrongAnswer}>정답: {q.answer}</Text>
             <Text style={s.wrongMine}>{r.timedOut ? '시간 초과' : `내 답: ${r.userAnswer || '(없음)'}`}</Text>
             {q.explain ? <Text style={s.wrongExplain}>{q.explain}</Text> : null}
-            {q.source === 'kbs' && <Text style={s.source}>출처: KBS 우리말 겨루기</Text>}
+            {sourceNote(q.source) && <Text style={s.source}>{sourceNote(q.source)}</Text>}
           </View>
         ))}
       </ScrollView>
