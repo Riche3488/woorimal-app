@@ -1,4 +1,4 @@
-// 홈: 다람쥐·곳간·연속 기록·오늘 목표·도토리, 한 판 시작, 틀린 문제 다시 풀기.
+// 홈: 다람쥐·곳간·연속 기록·오늘 목표·도토리, 한 판 시작, 오답노트.
 import { router } from 'expo-router';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,6 @@ import { C, R } from '../ui/theme';
 
 export default function Home() {
   const { save, counts } = useGame();
-  const reviewCount = counts.review;
   const lv = levelFor(save.totalGrains);
   const today = localDay(new Date());
   const streak = currentStreak(save.streak, today);
@@ -64,9 +63,9 @@ export default function Home() {
           <Text style={s.primaryText}>▶ 한 판 시작</Text>
           <Text style={s.primarySub}>10문제 · 하트 3개</Text>
         </Pressable>
-        <Pressable disabled={reviewCount === 0} onPress={() => router.push({ pathname: '/play', params: { mode: 'review' } })}
-          style={({ pressed }) => [s.secondary, reviewCount === 0 && s.disabled, pressed && s.pressed]} accessibilityRole="button">
-          <Text style={s.secondaryText}>틀린 문제 다시 풀기 ({reviewCount})</Text>
+        <Pressable onPress={() => router.push('/notebook')}
+          style={({ pressed }) => [s.secondary, pressed && s.pressed]} accessibilityRole="button">
+          <Text style={s.secondaryText}>📒 오답노트 · 오늘 복습 {counts.due}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -100,6 +99,5 @@ const s = StyleSheet.create({
   primarySub: { color: C.grainSoft, fontSize: 13, marginTop: 4 },
   secondary: { backgroundColor: C.card, borderRadius: R.card, paddingVertical: 16, alignItems: 'center', borderWidth: 1.5, borderColor: C.line },
   secondaryText: { color: C.ink, fontSize: 16, fontWeight: '700' },
-  disabled: { opacity: 0.4 },
   pressed: { opacity: 0.7, transform: [{ scale: 0.99 }] },
 });
