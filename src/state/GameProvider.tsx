@@ -69,7 +69,7 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
   }, [pack]);
 
   const startNormal = useCallback(() => pickRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
-  const startReview = useCallback(() => pickReviewRound(currentPack().questions, save.progress), [currentPack, save.progress]);
+  const startReview = useCallback(() => pickReviewRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
 
   const startChallenge = useCallback(() => pickChallenge(currentPack().questions, localDay(new Date())), [currentPack]);
 

@@ -1,5 +1,5 @@
-import { emptyProgress, recordResults, typeAccuracy, reviewKeys } from '../progress';
-import { pickRound, pickReviewRound, EASY_FIRST_TRIES } from '../picker';
+import { emptyProgress, recordResults, typeAccuracy, reviewKeys, toggleStar } from '../progress';
+import { pickRound, pickReviewRound, pickStarredRound, pickTypeRound, EASY_FIRST_TRIES } from '../picker';
 import type { RoundResult } from '../round';
 import type { AppQuestion, QuestionType } from '../types';
 
@@ -68,7 +68,7 @@ describe('기록', () => {
   test('묶음에서 빠진 문제는 다시 풀기에 나오지 않고, 없으면 빈 배열', () => {
     const p = recordResults(emptyProgress(), [result('broadcast:gone', false)], NOW);
     expect(reviewKeys(p, bank())).toEqual([]);
-    expect(pickReviewRound(bank(), p, { rng: seeded() })).toEqual([]);
+    expect(pickReviewRound(bank(), p, { rng: seeded(), now: NOW })).toEqual([]);
   });
   test('typeAccuracy는 정답률이 낮은 유형부터', () => {
     const p = recordResults(emptyProgress(), [result('meaning:1', true), result('spelling:1', false), result('spelling:2', true)], NOW);
@@ -77,4 +77,52 @@ describe('기록', () => {
       { type: 'meaning', total: 1, correct: 1, rate: 1 },
     ]);
   });
+});
+
+describe('공부 판', () => {
+  test('pickReviewRound: 복습 날 된 문제가 앞, 날 안 된 노트 문제가 뒤(최근 틀린 순), 외운 문제 없음', () => {
+    let p = recordResults(emptyProgress(), [result('meaning:1', false)], NOW - 3 * DAY);
+    p = recordResults(p, [result('meaning:2', false)], NOW - 2 * DAY);
+    p = recordResults(p, [result('spelling:1', false)], NOW - 1000);
+    p = recordResults(p, [result('spelling:2', false)], NOW);
+    // chosung:1은 외움
+    p = recordResults(p, [result('chosung:1', false)], NOW - 20 * DAY);
+    for (const back of [19, 16, 9]) p = recordResults(p, [result('chosung:1', true)], NOW - back * DAY);
+    const keys = pickReviewRound(bank(), p, { rng: seeded(), now: NOW }).map(x => x.key);
+    expect(keys).toEqual(['meaning:1', 'meaning:2', 'spelling:2', 'spelling:1']);
+  });
+  test('pickStarredRound: ⭐만, 오래전에 푼 순, 묶음에 없는 key 건너뜀', () => {
+    let p = recordResults(emptyProgress(), [result('meaning:3', true)], NOW - DAY);
+    p = recordResults(p, [result('meaning:4', true)], NOW - 2 * DAY);
+    for (const k of ['meaning:3', 'meaning:4', 'broadcast:gone']) p = toggleStar(p, k);
+    expect(pickStarredRound(bank(), p, { rng: seeded(), now: NOW }).map(x => x.key)).toEqual(['meaning:4', 'meaning:3']);
+  });
+  test('pickTypeRound: 그 유형만 10개, 복습 날 된 노트 문제 포함, 어려운 문제도 나온다', () => {
+    const p = recordResults(emptyProgress(), [result('spelling:8', false)], NOW - 2 * DAY);
+    const picked = pickTypeRound(bank(), p, 'spelling', { rng: seeded(), now: NOW });
+    expect(picked).toHaveLength(10);
+    expect(picked.every(x => x.type === 'spelling')).toBe(true);
+    expect(picked.map(x => x.key)).toContain('spelling:8');
+    expect(picked.some(x => !x.easy)).toBe(true);
+  });
+  test('pickTypeRound: 안 푼 문제를 오래전에 푼 문제보다 먼저', () => {
+    const solved = bank().filter(x => x.type === 'meaning' && x.key !== 'meaning:0' && x.key !== 'meaning:1').map(x => result(x.key, true));
+    const p = recordResults(emptyProgress(), solved, NOW - DAY);
+    const picked = pickTypeRound(bank(), p, 'meaning', { rng: seeded(), now: NOW, count: 2 }).map(x => x.key).sort();
+    expect(picked).toEqual(['meaning:0', 'meaning:1']);
+  });
+  test('pickTypeRound: 그 유형 문제가 모자라면 있는 만큼', () => {
+    expect(pickTypeRound(bank(), emptyProgress(), 'spacing', { rng: seeded(), now: NOW })).toEqual([]);
+    expect(pickTypeRound(bank(), emptyProgress(), 'meaning', { rng: seeded(), now: NOW, count: 20 })).toHaveLength(10);
+  });
+});
+
+test('pickRound: ⭐만 누르고 안 푼 문제는 안 푼 문제로 친다', () => {
+  // 쉬운 meaning 5개 중 4개는 풀었고, meaning:0은 ⭐만 눌렀다.
+  let p = recordResults(emptyProgress(), ['meaning:1', 'meaning:2', 'meaning:3', 'meaning:4'].map(k => result(k, true)), NOW - 1000);
+  p = toggleStar(p, 'meaning:0');
+  for (let s = 1; s < 6; s++) {
+    const keys = pickRound(bank(), p, { rng: seeded(s), now: NOW }).map(x => x.key);
+    expect(keys).toContain('meaning:0');
+  }
 });
