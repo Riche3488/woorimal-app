@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TYPE_LABELS } from '../core/labels';
-import { answer, beginQuestion, canSubmit, isOver, remainingMs, startRound, timeout, type Round } from '../core/round';
+import { answer, beginQuestion, canSubmit, giveUp, isOver, remainingMs, startRound, timeout, type Round } from '../core/round';
 import { correctInput, wrongInput } from '../core/testmode';
 import { timeLimitMs } from '../core/timing';
 import type { AnswerInput, AppQuestion } from '../core/types';
@@ -20,9 +20,11 @@ type Props = {
   testMode?: boolean;
   hearts?: number; // 오늘의 문제는 문제 수만큼 주고 숨겨서 끝까지 풀게 한다
   showHearts?: boolean;
+  starred?: (key: string) => boolean; // ⭐ 담기(없으면 별 버튼을 숨긴다)
+  onToggleStar?: (key: string) => void;
 };
 
-export function PlayScreen({ questions, onFinish, haptics = true, testMode = false, hearts, showHearts = true }: Props) {
+export function PlayScreen({ questions, onFinish, haptics = true, testMode = false, hearts, showHearts = true, starred, onToggleStar }: Props) {
   const [round, setRound] = useState<Round>(() => startRound(questions, Date.now(), hearts));
   const [phase, setPhase] = useState<'question' | 'feedback'>('question');
   const [now, setNow] = useState(() => Date.now());
@@ -63,6 +65,11 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
   const submit = useCallback((input: AnswerInput) => {
     if (phase !== 'question' || !question || !canSubmit(question, input)) return;
     settle(answer(round, input, Date.now()));
+  }, [phase, question, round, settle]);
+
+  const dontKnow = useCallback(() => {
+    if (phase !== 'question' || !question) return;
+    settle(giveUp(round, Date.now()));
   }, [phase, question, round, settle]);
 
   // 남은 시간은 실제 시각으로 계산하므로, 앱이 백그라운드에 있다 돌아와도 그만큼 줄어 있다.
@@ -114,14 +121,23 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
             {question.kind === 'choice' && <ChoiceAnswer choices={question.choices ?? []} onPick={submit} disabled={false} />}
             {question.kind === 'typed' && <TypedAnswer chosung={question.hint?.chosung} onSubmit={submit} disabled={false} />}
             {question.kind === 'spacing' && <SpacingAnswer syllables={question.syllables ?? []} onSubmit={submit} disabled={false} />}
+            <Pressable onPress={dontKnow} hitSlop={12} style={s.dontKnow} accessibilityRole="button">
+              <Text style={s.dontKnowText}>모르겠어요</Text>
+            </Pressable>
           </View>
         ) : last ? (
           <Pressable onPress={() => next(round)} style={[s.feedback, last.correct ? s.good : s.bad]} accessibilityRole="button">
             <View style={s.verdictRow}>
               <Text style={[s.verdict, { color: last.correct ? C.good : C.bad }]}>
-                {last.correct ? '정답!' : last.timedOut ? '시간 초과' : '아쉬워요'}
+                {last.correct ? '정답!' : last.timedOut ? '시간 초과' : last.gaveUp ? '모르겠어요' : '아쉬워요'}
               </Text>
               {last.correct && last.grains ? <Text style={s.gain}>+{last.grains} 🌾</Text> : null}
+              {onToggleStar ? (
+                <Pressable onPress={() => onToggleStar(shown.key)} hitSlop={12} style={s.star} accessibilityRole="button"
+                  accessibilityLabel={starred?.(shown.key) ? '담기 취소' : '담기'}>
+                  <Text style={s.starText}>{starred?.(shown.key) ? '⭐' : '☆'}</Text>
+                </Pressable>
+              ) : null}
             </View>
             {!last.correct && <Text style={s.answerLine}>정답: {shown.answer}</Text>}
             {last.synonymHit && <Text style={s.explain}>비슷한 뜻이지만 여기서 찾는 말은 '{shown.answer}'입니다</Text>}
@@ -152,6 +168,10 @@ const s = StyleSheet.create({
   verdictRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
   verdict: { fontSize: 22, fontWeight: '800' },
   gain: { fontSize: 17, fontWeight: '700', color: C.grain },
+  dontKnow: { alignSelf: 'center', marginTop: 14, paddingVertical: 6, paddingHorizontal: 12 },
+  dontKnowText: { fontSize: 14, color: C.faint, fontWeight: '600', textDecorationLine: 'underline' },
+  star: { marginLeft: 'auto', paddingHorizontal: 4 },
+  starText: { fontSize: 24, color: C.grain },
   answerLine: { fontSize: 18, color: C.ink, fontWeight: '700' },
   explain: { fontSize: 14, lineHeight: 21, color: C.sub },
   tapHint: { fontSize: 12, color: C.faint, marginTop: 4 },

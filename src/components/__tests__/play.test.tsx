@@ -107,3 +107,53 @@ test('오늘의 문제: 하트를 숨기고 세 번 틀려도 끝까지 푼다',
   expect(onFinish).toHaveBeenCalledTimes(1);
   expect(onFinish.mock.calls[0][0].results).toHaveLength(5);
 });
+
+describe('모르겠어요', () => {
+  test('누르면 하트가 줄고 정답과 모르겠어요가 보인다', async () => {
+    await render(<PlayScreen questions={[originalChoice, kbsChoice]} onFinish={jest.fn()} />);
+    await fireEvent.press(screen.getByText('모르겠어요'));
+    expect(screen.getAllByLabelText('남은 하트')).toHaveLength(2);
+    expect(screen.getByText('정답: 오뚝이')).toBeTruthy();
+    expect(screen.getByText('눌러서 다음 문제')).toBeTruthy();
+    expect(screen.getByText('모르겠어요')).toBeTruthy(); // 판정 문구
+  });
+  test('두 번 눌러도 결과는 하나', async () => {
+    const onFinish = jest.fn();
+    await render(<PlayScreen questions={[originalChoice]} onFinish={onFinish} />);
+    const btn = screen.getByText('모르겠어요');
+    await fireEvent.press(btn);
+    await fireEvent.press(btn);
+    await fireEvent.press(screen.getByText('눌러서 다음 문제'));
+    expect(onFinish).toHaveBeenCalledTimes(1);
+    const round = onFinish.mock.calls[0][0];
+    expect(round.results).toHaveLength(1);
+    expect(round.results[0]).toMatchObject({ gaveUp: true, correct: false });
+    expect(round.hearts).toBe(2);
+  });
+  test('입력형에도 있다', async () => {
+    await render(<PlayScreen questions={[typedQ]} onFinish={jest.fn()} />);
+    expect(screen.getByText('모르겠어요')).toBeTruthy();
+  });
+});
+
+describe('⭐ 담기', () => {
+  test('별을 누르면 onToggleStar(key)가 불리고 다음 문제로 넘어가지 않는다', async () => {
+    const onToggleStar = jest.fn();
+    await render(<PlayScreen questions={[originalChoice, kbsChoice]} onFinish={jest.fn()} starred={() => false} onToggleStar={onToggleStar} />);
+    expect(screen.queryByLabelText('담기')).toBeNull(); // 문제 푸는 중에는 없음
+    await fireEvent.press(screen.getByText('오똑이'));
+    await fireEvent.press(screen.getByLabelText('담기'));
+    expect(onToggleStar).toHaveBeenCalledWith('spelling:2');
+    expect(screen.getByText('눌러서 다음 문제')).toBeTruthy();
+  });
+  test('담긴 문제는 담기 취소로 보인다', async () => {
+    await render(<PlayScreen questions={[originalChoice]} onFinish={jest.fn()} starred={() => true} onToggleStar={jest.fn()} />);
+    await fireEvent.press(screen.getByText('오똑이'));
+    expect(screen.getByLabelText('담기 취소')).toBeTruthy();
+  });
+  test('onToggleStar가 없으면 별이 없다', async () => {
+    await render(<PlayScreen questions={[originalChoice]} onFinish={jest.fn()} />);
+    await fireEvent.press(screen.getByText('오똑이'));
+    expect(screen.queryByLabelText('담기')).toBeNull();
+  });
+});

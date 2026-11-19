@@ -38,7 +38,8 @@ export default function Play() {
     <SafeAreaView style={s.screen}>
       {questions.length ? (
         <PlayScreen questions={questions} onFinish={finish} haptics={game.save.settings.haptics} testMode={game.save.settings.testMode}
-          hearts={challenge ? CHALLENGE_SIZE : undefined} showHearts={!challenge} />
+          hearts={challenge ? CHALLENGE_SIZE : undefined} showHearts={!challenge}
+          starred={key => !!game.save.progress.stats[key]?.starred} onToggleStar={game.toggleStar} />
       ) : (
         <View style={s.empty}><Text style={s.emptyText}>{doneToday ? '오늘의 문제는 이미 풀었어요. 내일 새 문제가 나와요' : '풀 문제가 없어요'}</Text></View>
       )}
