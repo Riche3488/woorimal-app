@@ -1,4 +1,4 @@
-// 결과: 정답 수·정답률·얻은 낱알, 경험치 바, 레벨업·곳간 변화 연출, 다음 목표 안내, 틀린 문제 보기.
+// 결과: 정답 수·정답률·얻은 낱알, 경험치 바, 레벨업·곳간 변화 연출, 다음 목표·외운 문제 안내, 틀린 문제 보기(⭐ 담기).
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
@@ -7,12 +7,13 @@ import { Barn, Squirrel } from '../components/bits';
 import { challengeNumber, marksToEmoji, shareText } from '../core/challenge';
 import { resultNudges, todayRounds } from '../core/goals';
 import { barnFor, currentStreak, freezesUsed, levelFor, localDay } from '../core/growth';
-import { sourceNote } from '../core/labels';
+import { sourceNote, TYPE_LABELS } from '../core/labels';
+import { newlyMastered } from '../core/progress';
 import { useGame } from '../state/GameProvider';
 import { C, R } from '../ui/theme';
 
 export default function Result() {
-  const { lastRound, lastMode, previousSave, save } = useGame();
+  const { lastRound, lastMode, lastPracticeType, previousSave, save, toggleStar } = useGame();
   const [showWrong, setShowWrong] = useState(false);
   const before = levelFor(previousSave?.totalGrains ?? 0);
   const after = levelFor(save.totalGrains);
@@ -46,6 +47,7 @@ export default function Result() {
     todayRounds: todayRounds(save.daily, today),
     freezesUsed: used,
     freezeEarned: (save.streak.freezes ?? 0) > (previousSave?.streak.freezes ?? 0) - used,
+    mastered: previousSave ? newlyMastered(previousSave.progress, save.progress) : 0,
   });
   const share = () => {
     Share.share({ message: shareText({ day: today, marks: save.challenge.marks, streak: currentStreak(save.streak, today) }) }).catch(() => {});
@@ -58,7 +60,11 @@ export default function Result() {
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.heading}>
-          {lastMode === 'challenge' ? `오늘의 문제 #${challengeNumber(today)}` : lastRound.hearts === 0 ? '하트를 다 썼어요' : '한 판 끝!'}
+          {lastMode === 'challenge' ? `오늘의 문제 #${challengeNumber(today)}`
+            : lastRound.hearts === 0 ? '하트를 다 썼어요'
+            : lastMode === 'review' ? '복습 끝!'
+            : lastMode === 'practice' && lastPracticeType ? `${TYPE_LABELS[lastPracticeType]} 연습 끝!`
+            : '한 판 끝!'}
         </Text>
         {lastMode === 'challenge' && (
           <View style={s.share}>
@@ -95,9 +101,15 @@ export default function Result() {
         )}
         {showWrong && wrong.map(({ r, q }) => (
           <View key={q.key} style={s.wrongCard}>
-            <Text style={s.wrongPrompt}>{q.prompt}</Text>
+            <View style={s.wrongTop}>
+              <Text style={s.wrongPrompt}>{q.prompt}</Text>
+              <Pressable onPress={() => toggleStar(q.key)} hitSlop={10} accessibilityRole="button"
+                accessibilityLabel={save.progress.stats[q.key]?.starred ? '담기 취소' : '담기'}>
+                <Text style={s.star}>{save.progress.stats[q.key]?.starred ? '⭐' : '☆'}</Text>
+              </Pressable>
+            </View>
             <Text style={s.wrongAnswer}>정답: {q.answer}</Text>
-            <Text style={s.wrongMine}>{r.timedOut ? '시간 초과' : `내 답: ${r.userAnswer || '(없음)'}`}</Text>
+            <Text style={s.wrongMine}>{r.timedOut ? '시간 초과' : r.gaveUp ? '모르겠어요' : `내 답: ${r.userAnswer || '(없음)'}`}</Text>
             {q.explain ? <Text style={s.wrongExplain}>{q.explain}</Text> : null}
             {sourceNote(q.source) && <Text style={s.source}>{sourceNote(q.source)}</Text>}
           </View>
@@ -152,7 +164,9 @@ const s = StyleSheet.create({
   xpText: { fontSize: 13, color: C.sub },
   link: { fontSize: 15, color: C.accent, fontWeight: '700', textAlign: 'center', padding: 8 },
   wrongCard: { backgroundColor: C.card, borderRadius: R.card, padding: 16, gap: 4, borderWidth: 1, borderColor: C.line },
-  wrongPrompt: { fontSize: 15, color: C.ink, fontWeight: '600' },
+  wrongTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  wrongPrompt: { flex: 1, fontSize: 15, color: C.ink, fontWeight: '600' },
+  star: { fontSize: 20, color: C.grain },
   wrongAnswer: { fontSize: 15, color: C.good, fontWeight: '700' },
   wrongMine: { fontSize: 13, color: C.bad },
   wrongExplain: { fontSize: 13, color: C.sub, lineHeight: 19 },

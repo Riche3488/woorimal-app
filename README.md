@@ -5,6 +5,7 @@
 - 설계: [docs/superpowers/specs/2026-11-19-woorimal-app-design.md](docs/superpowers/specs/2026-11-19-woorimal-app-design.md)
 - 1차 구현 계획: [docs/superpowers/plans/2026-11-19-woorimal-app.md](docs/superpowers/plans/2026-11-19-woorimal-app.md)
 - 오늘의 문제(날짜 시드로 모두에게 같은 5문제, 하루 한 번, 🟩🟥⏰ 결과 공유): [docs/superpowers/specs/2026-11-19-daily-challenge.md](docs/superpowers/specs/2026-11-19-daily-challenge.md)
+- 공부 기능('모르겠어요'=오답 처리, 오답노트(복습할 문제·⭐ 담은 문제·외운 문제), 간격 복습 1→3→7일·세 번 맞히면 외움, 기록 화면에서 유형별 연습): [docs/superpowers/specs/2026-11-19-study-notebook.md](docs/superpowers/specs/2026-11-19-study-notebook.md)
 - 계속하게 만드는 장치(하루 목표 3판·도토리 연속 기록 보호권·결과 화면 다음 목표 안내·틀리면 해설 읽고 넘기기): [docs/superpowers/specs/2026-11-19-retention-1.md](docs/superpowers/specs/2026-11-19-retention-1.md)
 
 ## 구조
@@ -14,7 +15,7 @@
 | `src/core/` | 화면과 분리한 게임 규칙(채점·제한 시간·하트·출제·성장·묶음 검사). Jest로 검증 |
 | `src/data/` | 기기 저장(AsyncStorage), 문제 묶음 읽기·갱신(expo-file-system) |
 | `src/state/GameProvider.tsx` | 묶음·저장을 화면에 넘기는 상태 |
-| `src/app/` | 화면(expo-router): 홈·게임·결과·기록·설정 |
+| `src/app/` | 화면(expo-router): 홈·게임·결과·기록·오답노트·설정 |
 | `src/components/` | 게임 화면과 작은 조각들 |
 | `assets/pack.json` | 앱에 내장하는 문제 묶음 (`npm run sync-pack`으로 갱신) |
 

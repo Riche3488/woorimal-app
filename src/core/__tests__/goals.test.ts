@@ -41,3 +41,16 @@ describe('결과 화면 안내', () => {
     expect(resultNudges({ ...base, freezeEarned: true })[0]).toBe('🌰 도토리를 모았어요. 하루 빠져도 연속 기록을 지켜 줘요');
   });
 });
+
+describe('외운 문제 안내', () => {
+  const base = { beforeGrains: 60, afterGrains: 120, roundGrains: 60, todayRounds: 1, freezesUsed: 0, freezeEarned: false };
+  test('외운 문제가 있으면 맨 앞, 최대 2줄', () => {
+    const out = resultNudges({ ...base, mastered: 2, freezesUsed: 1 });
+    expect(out[0]).toBe('📒 2문제를 외웠어요');
+    expect(out).toHaveLength(2);
+  });
+  test('0이거나 없으면 표시 안 함', () => {
+    expect(resultNudges({ ...base, mastered: 0 }).some(t => t.includes('외웠어요'))).toBe(false);
+    expect(resultNudges(base).some(t => t.includes('외웠어요'))).toBe(false);
+  });
+});

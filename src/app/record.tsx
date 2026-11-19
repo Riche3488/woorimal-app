@@ -1,4 +1,4 @@
-// 기록: 유형별 정답률(약한 유형 먼저), 누적 판 수, 연속 기록.
+// 기록: 유형별 정답률(약한 유형 먼저, 누르면 그 유형 연습), 누적 판 수, 연속 기록.
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,16 +29,17 @@ export default function Record() {
           <Item label="푼 문제" value={`${solved}`} />
         </View>
 
-        <Text style={s.section}>유형별 정답률 (약한 유형부터)</Text>
+        <Text style={s.section}>유형별 정답률 (약한 유형부터 · 누르면 연습)</Text>
         {rows.length === 0 && <Text style={s.empty}>아직 기록이 없어요. 한 판 풀어 보세요.</Text>}
         {rows.map(r => (
-          <View key={r.type} style={s.row}>
+          <Pressable key={r.type} onPress={() => router.push({ pathname: '/play', params: { mode: 'practice', type: r.type } })}
+            style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]} accessibilityRole="button">
             <View style={s.rowTop}>
               <Text style={s.rowLabel}>{TYPE_LABELS[r.type as QuestionType] ?? r.type}</Text>
-              <Text style={s.rowValue}>{Math.round(r.rate * 100)}% <Text style={s.rowSub}>({r.correct}/{r.total})</Text></Text>
+              <Text style={s.rowValue}>{Math.round(r.rate * 100)}% <Text style={s.rowSub}>({r.correct}/{r.total})</Text>  <Text style={s.practice}>연습 ›</Text></Text>
             </View>
             <View style={s.track}><View style={[s.fill, { width: `${r.rate * 100}%`, backgroundColor: r.rate < 0.5 ? C.bad : r.rate < 0.8 ? C.grain : C.good }]} /></View>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -70,6 +71,7 @@ const s = StyleSheet.create({
   rowTop: { flexDirection: 'row', justifyContent: 'space-between' },
   rowLabel: { fontSize: 15, fontWeight: '700', color: C.ink },
   rowValue: { fontSize: 15, fontWeight: '700', color: C.ink },
+  practice: { fontSize: 13, color: C.accent, fontWeight: '700' },
   rowSub: { fontSize: 12, color: C.sub, fontWeight: '400' },
   track: { height: 8, borderRadius: 4, backgroundColor: C.line, overflow: 'hidden' },
   fill: { height: '100%' },

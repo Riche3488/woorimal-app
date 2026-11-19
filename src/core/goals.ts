@@ -19,10 +19,12 @@ export type NudgeInput = {
   todayRounds: number; // 이번 판을 포함한 오늘 판 수
   freezesUsed: number;
   freezeEarned: boolean;
+  mastered?: number; // 이번 판에서 외운(오답노트에서 졸업한) 문제 수
 };
 
 export function resultNudges(i: NudgeInput): string[] {
   const out: string[] = [];
+  if (i.mastered && i.mastered > 0) out.push(`📒 ${i.mastered}문제를 외웠어요`);
   if (i.freezesUsed > 0) out.push('🌰 도토리로 연속 기록을 지켰어요');
   else if (i.freezeEarned) out.push('🌰 도토리를 모았어요. 하루 빠져도 연속 기록을 지켜 줘요');
 
