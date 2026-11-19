@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { TYPE_LABELS } from '../core/labels';
 import { answer, beginQuestion, canSubmit, isOver, remainingMs, startRound, timeout, type Round } from '../core/round';
+import { correctInput, wrongInput } from '../core/testmode';
 import { timeLimitMs } from '../core/timing';
 import type { AnswerInput, AppQuestion } from '../core/types';
 import { C, R } from '../ui/theme';
@@ -12,9 +13,9 @@ import { Hearts, SourceNote, TimerBar } from './bits';
 
 export const FEEDBACK_MS = 1200;
 
-type Props = { questions: AppQuestion[]; onFinish(round: Round): void; haptics?: boolean };
+type Props = { questions: AppQuestion[]; onFinish(round: Round): void; haptics?: boolean; testMode?: boolean };
 
-export function PlayScreen({ questions, onFinish, haptics = true }: Props) {
+export function PlayScreen({ questions, onFinish, haptics = true, testMode = false }: Props) {
   const [round, setRound] = useState<Round>(() => startRound(questions, Date.now()));
   const [phase, setPhase] = useState<'question' | 'feedback'>('question');
   const [now, setNow] = useState(() => Date.now());
@@ -89,6 +90,17 @@ export function PlayScreen({ questions, onFinish, haptics = true }: Props) {
           <SourceNote source={shown.source} />
         </View>
 
+        {testMode && phase === 'question' && question ? (
+          <View style={s.test}>
+            <Text style={s.testText}>테스트 · 정답: {question.answer}</Text>
+            <View style={s.testRow}>
+              <Pressable style={s.testBtn} onPress={() => submit(correctInput(question))}><Text style={s.testBtnText}>정답 제출</Text></Pressable>
+              <Pressable style={s.testBtn} onPress={() => submit(wrongInput(question))}><Text style={s.testBtnText}>오답 제출</Text></Pressable>
+              <Pressable style={s.testBtn} onPress={() => settle(timeout(round, Date.now()))}><Text style={s.testBtnText}>시간 초과로 넘기기</Text></Pressable>
+            </View>
+          </View>
+        ) : null}
+
         {phase === 'question' && question ? (
           <View key={question.key}>
             {question.kind === 'choice' && <ChoiceAnswer choices={question.choices ?? []} onPick={submit} disabled={false} />}
@@ -135,4 +147,9 @@ const s = StyleSheet.create({
   answerLine: { fontSize: 18, color: C.ink, fontWeight: '700' },
   explain: { fontSize: 14, lineHeight: 21, color: C.sub },
   tapHint: { fontSize: 12, color: C.faint, marginTop: 4 },
+  test: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.accent, borderRadius: R.card, padding: 12, gap: 8 },
+  testText: { fontSize: 14, color: C.accent, fontWeight: '700' },
+  testRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  testBtn: { backgroundColor: C.card, borderWidth: 1, borderColor: C.line, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
+  testBtnText: { fontSize: 13, color: C.ink, fontWeight: '600' },
 });

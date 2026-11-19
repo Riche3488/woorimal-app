@@ -21,7 +21,7 @@ export default function Play() {
   return (
     <SafeAreaView style={s.screen}>
       {questions.length ? (
-        <PlayScreen questions={questions} onFinish={finish} haptics={game.save.settings.haptics} />
+        <PlayScreen questions={questions} onFinish={finish} haptics={game.save.settings.haptics} testMode={game.save.settings.testMode} />
       ) : (
         <View style={s.empty}><Text style={s.emptyText}>풀 문제가 없어요</Text></View>
       )}

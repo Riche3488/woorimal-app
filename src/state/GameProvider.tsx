@@ -16,6 +16,7 @@ export type Game = {
   startReview(): AppQuestion[];
   complete(round: Round): void;
   updateSettings(patch: Partial<Settings>): void;
+  resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
 };
 
 const GameContext = createContext<Game | null>(null);
@@ -81,11 +82,21 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
     });
   }, []);
 
+  const resetRecords = useCallback(() => {
+    setSave(prev => {
+      const next = { ...defaultSave(), settings: prev.settings };
+      writeSave(next).catch(() => {});
+      return next;
+    });
+    setLastRound(null);
+    setPreviousSave(null);
+  }, []);
+
   const reviewCount = useMemo(() => (pack ? reviewKeys(save.progress, pack.questions).length : 0), [pack, save.progress]);
 
   if (!ready || !pack) return <>{fallback}</>;
   return (
-    <GameContext.Provider value={{ pack, save, reviewCount, lastRound, previousSave, startNormal, startReview, complete, updateSettings }}>
+    <GameContext.Provider value={{ pack, save, reviewCount, lastRound, previousSave, startNormal, startReview, complete, updateSettings, resetRecords }}>
       {children}
     </GameContext.Provider>
   );

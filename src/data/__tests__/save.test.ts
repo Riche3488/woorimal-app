@@ -37,3 +37,11 @@ test('finishRound가 낱알·판 수·연속 기록·문제 기록을 갱신하�
   await writeSave(next);
   await expect(loadSave()).resolves.toEqual(next);
 });
+
+test('테스트 모드는 기본으로 꺼져 있고, 예전 저장을 읽어도 꺼져 있다', async () => {
+  expect(defaultSave().settings.testMode).toBe(false);
+  const old = { ...defaultSave(), settings: { haptics: false, sound: true } };
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(old));
+  const loaded = await loadSave();
+  expect(loaded.settings).toEqual({ haptics: false, sound: true, testMode: false });
+});

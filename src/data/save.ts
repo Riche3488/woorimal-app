@@ -6,11 +6,11 @@ import type { Round } from '../core/round';
 
 export const SAVE_KEY = 'woorimal.save.v1';
 
-export type Settings = { haptics: boolean; sound: boolean };
+export type Settings = { haptics: boolean; sound: boolean; testMode: boolean };
 export type SaveData = { schema: 1; totalGrains: number; rounds: number; streak: Streak; progress: Progress; settings: Settings };
 
 export function defaultSave(): SaveData {
-  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null }, progress: emptyProgress(), settings: { haptics: true, sound: true } };
+  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null }, progress: emptyProgress(), settings: { haptics: true, sound: true, testMode: false } };
 }
 
 export async function loadSave(): Promise<SaveData> {
