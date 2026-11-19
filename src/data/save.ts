@@ -22,7 +22,14 @@ export async function loadSave(): Promise<SaveData> {
     const data = JSON.parse(text);
     if (data?.schema !== 1 || typeof data.totalGrains !== 'number' || !data.progress?.stats) return defaultSave();
     const base = defaultSave();
-    const stats = Object.fromEntries(Object.entries(data.progress.stats).map(([k, v]) => [k, normalizeStat(v as Parameters<typeof normalizeStat>[0])]));
+    // 깨진 항목은 그 문제 기록만 버린다(저장 전체를 잃지 않게).
+    const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : 0);
+    const stats = Object.fromEntries(Object.entries(data.progress.stats as Record<string, unknown>)
+      .filter(([, v]) => v && typeof v === 'object')
+      .map(([k, v]) => {
+        const o = v as Record<string, unknown>;
+        return [k, normalizeStat({ ...o, seen: num(o.seen), correct: num(o.correct), lastAt: num(o.lastAt) })];
+      }));
     const progress: Progress = { triesByType: data.progress.triesByType ?? {}, stats };
     return { ...base, ...data, progress, streak: { ...base.streak, ...data.streak }, daily: { ...base.daily, ...data.daily }, challenge: { ...base.challenge, ...data.challenge }, settings: { ...base.settings, ...data.settings } };
   } catch {

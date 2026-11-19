@@ -86,3 +86,17 @@ test('⭐는 판 결과 저장 뒤에도 남는다', () => {
   const next = finishRound(toggleStarSave(defaultSave(), 'meaning:2'), round, new Date(T0 + 2000));
   expect(next.progress.stats['meaning:2']).toMatchObject({ starred: true, box: 1 });
 });
+
+test('깨진 문제 기록 하나 때문에 저장 전체를 잃지 않는다', async () => {
+  const D0 = new Date(2026, 10, 19, 9).getTime();
+  const data = { ...defaultSave(), totalGrains: 500, progress: { triesByType: {}, stats: {
+    'meaning:1': null, 'meaning:2': 'oops', 'meaning:3': { needsReview: true, lastAt: D0 },
+    'meaning:4': { seen: 1, correct: 0, lastAt: D0, lastWrongAt: D0, needsReview: true },
+  } } };
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  const loaded = await loadSave();
+  expect(loaded.totalGrains).toBe(500);
+  expect(Object.keys(loaded.progress.stats).sort()).toEqual(['meaning:3', 'meaning:4']);
+  expect(loaded.progress.stats['meaning:3']).toMatchObject({ seen: 0, correct: 0, box: 1, wrong: 1 });
+  expect(loaded.progress.stats['meaning:4']).toMatchObject({ box: 1, wrong: 1 });
+});
