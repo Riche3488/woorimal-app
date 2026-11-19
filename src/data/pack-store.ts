@@ -1,6 +1,6 @@
 // 문제 묶음: 앱에 내장한 assets/pack.json과, 내려받아 둔 최신 묶음(문서 폴더) 중 하나를 쓴다.
 import { File, Paths } from 'expo-file-system';
-import { PACK_BASE_URL, choosePack, parsePack } from '../core/pack';
+import { APP_PACK_COMPAT, PACK_BASE_URL, acceptUpdate, choosePack, parsePack } from '../core/pack';
 import type { AppPack } from '../core/types';
 
 export type PackCache = { read(): Promise<string | null>; write(text: string): Promise<void> };
@@ -43,11 +43,12 @@ export async function refreshPack(current: AppPack, fetchFn: FetchFn = fetch, ca
     if (!head.ok) return null;
     const info = await head.json();
     if (info?.schema !== 1 || typeof info.version !== 'string' || info.version === current.version) return null;
+    if (typeof info.minApp === 'number' && info.minApp > APP_PACK_COMPAT) return null;
     const res = await fetchFn(`${PACK_BASE_URL}pack.json`);
     if (!res.ok) return null;
     const text = await res.text();
     const next = parsePack(JSON.parse(text));
-    if (!next) return null;
+    if (!next || !acceptUpdate(current, next)) return null;
     await cache.write(text);
     return next;
   } catch {

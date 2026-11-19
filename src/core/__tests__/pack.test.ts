@@ -1,4 +1,4 @@
-import { parsePack, choosePack } from '../pack';
+import { parsePack, choosePack, acceptUpdate, APP_PACK_COMPAT } from '../pack';
 import { refreshPack, type PackCache } from '../../data/pack-store';
 import type { AppPack } from '../types';
 
@@ -31,10 +31,56 @@ describe('parsePack', () => {
   });
 });
 
-test('choosePack: 캐시가 있으면 캐시, 없으면 내장', () => {
-  const bundled = makePack('b'), cached = makePack('c');
-  expect(choosePack(bundled, null)).toBe(bundled);
-  expect(choosePack(bundled, cached)).toBe(cached);
+describe('parsePack 안전장치', () => {
+  test('모르는 유형·출처, 겹치는 키는 거절', () => {
+    const badType = makePack() as any; badType.questions[0].type = 'video';
+    expect(parsePack(badType)).toBeNull();
+    const badSource = makePack() as any; badSource.questions[0].source = 'unknown';
+    expect(parsePack(badSource)).toBeNull();
+    const dup = makePack(); dup.questions[1] = { ...dup.questions[1], key: dup.questions[0].key };
+    expect(parsePack(dup)).toBeNull();
+  });
+  test('이 앱보다 새 앱이 필요한 묶음(minApp)은 거절', () => {
+    expect(parsePack({ ...makePack(), minApp: APP_PACK_COMPAT })).not.toBeNull();
+    expect(parsePack({ ...makePack(), minApp: APP_PACK_COMPAT + 1 })).toBeNull();
+  });
+});
+
+const at = (version: string, generatedAt: string, n = 2): AppPack => {
+  const p = makePack(version);
+  const questions = Array.from({ length: n }, (_, i) => ({ ...p.questions[0], key: `spelling:${i}` }));
+  return { ...p, generatedAt, questions };
+};
+
+describe('choosePack', () => {
+  test('캐시가 없으면 내장', () => {
+    const bundled = makePack('b');
+    expect(choosePack(bundled, null)).toBe(bundled);
+  });
+  test('캐시가 내장보다 새것이면 캐시', () => {
+    const bundled = at('b', '2026-11-19T00:00:00.000Z'), cached = at('c', '2026-11-20T00:00:00.000Z');
+    expect(choosePack(bundled, cached)).toBe(cached);
+  });
+  test('앱 업데이트로 내장이 더 새것이면 내장', () => {
+    const bundled = at('b', '2026-12-01T00:00:00.000Z'), cached = at('c', '2026-11-20T00:00:00.000Z');
+    expect(choosePack(bundled, cached)).toBe(bundled);
+  });
+});
+
+describe('acceptUpdate', () => {
+  const current = at('a', '2026-11-19T00:00:00.000Z', 100);
+  test('새것이고 크기가 비슷하면 받는다', () => {
+    expect(acceptUpdate(current, at('b', '2026-11-20T00:00:00.000Z', 90))).toBe(true);
+  });
+  test('지금 것보다 오래된 묶음은 받지 않는다', () => {
+    expect(acceptUpdate(current, at('b', '2026-11-18T00:00:00.000Z', 100))).toBe(false);
+  });
+  test('문제 수가 절반 아래로 줄면 받지 않는다(배포 실수 방지)', () => {
+    expect(acceptUpdate(current, at('b', '2026-11-20T00:00:00.000Z', 49))).toBe(false);
+  });
+  test('웹이 shrink로 일부러 줄였다고 밝히면 받는다', () => {
+    expect(acceptUpdate(current, { ...at('b', '2026-11-20T00:00:00.000Z', 49), shrink: true })).toBe(true);
+  });
 });
 
 describe('refreshPack', () => {
@@ -64,9 +110,24 @@ describe('refreshPack', () => {
     await expect(refreshPack(makePack(), fetchFn, cache)).resolves.toBeNull();
     expect(cache.saved).toBeNull();
   });
+  test('version.json의 minApp이 이 앱보다 크면 pack.json을 받지 않는다', async () => {
+    const cache = memoryCache();
+    const fetchFn = jest.fn(async () => respond({ schema: 1, version: 'bbbbbbbbbbbb', url: 'pack.json', minApp: APP_PACK_COMPAT + 1 }));
+    await expect(refreshPack(makePack(), fetchFn, cache)).resolves.toBeNull();
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+  test('받은 묶음이 안전 검사에 걸리면 캐시에 쓰지 않는다', async () => {
+    const cache = memoryCache();
+    const next = { ...makePack('bbbbbbbbbbbb'), generatedAt: '2020-01-01T00:00:00.000Z' };
+    const fetchFn = jest.fn()
+      .mockResolvedValueOnce(respond({ schema: 1, version: 'bbbbbbbbbbbb', url: 'pack.json' }))
+      .mockResolvedValueOnce(respond(next));
+    await expect(refreshPack(makePack(), fetchFn, cache)).resolves.toBeNull();
+    expect(cache.saved).toBeNull();
+  });
   test('새 버전이 유효하면 캐시에 쓰고 돌려준다', async () => {
     const cache = memoryCache();
-    const next = makePack('bbbbbbbbbbbb');
+    const next = { ...makePack('bbbbbbbbbbbb'), generatedAt: '2026-11-20T00:00:00.000Z' };
     const fetchFn = jest.fn()
       .mockResolvedValueOnce(respond({ schema: 1, version: 'bbbbbbbbbbbb', url: 'pack.json' }))
       .mockResolvedValueOnce(respond(next));

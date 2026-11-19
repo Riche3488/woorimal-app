@@ -27,6 +27,8 @@ export type AppPack = {
   generatedAt: string;
   counts: Record<string, number>;
   questions: AppQuestion[];
+  minApp?: number; // 이 묶음을 읽으려면 필요한 앱 수준(APP_PACK_COMPAT)
+  shrink?: boolean; // 문제 수를 일부러 크게 줄인 배포(예: 출처 일괄 제외)
 };
 
 export type AnswerInput = string | boolean[];
