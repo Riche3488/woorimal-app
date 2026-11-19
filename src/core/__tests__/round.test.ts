@@ -21,12 +21,19 @@ test('상수: 한 판 10문제, 하트 3개', () => {
 });
 
 describe('timeLimitMs', () => {
-  test('보기형은 지문 길이, 입력형은 20초, 띄어쓰기는 음절 수(상한 25초)', () => {
-    expect(timeLimitMs(choice('a'.repeat(30)))).toBe(8000);
-    expect(timeLimitMs(choice('a'.repeat(31)))).toBe(12000);
+  test('보기형은 지문과 보기 글자 수에 비례(8~20초)', () => {
+    expect(timeLimitMs(choice('a'.repeat(10)))).toBe(8000);
+    const usage = { ...choice('‘겉돌다’를 잘못 쓴 문장은?'), choices: Array.from({ length: 5 }, () => '가'.repeat(35)) };
+    expect(timeLimitMs(usage)).toBeGreaterThanOrEqual(16000);
+    expect(timeLimitMs({ ...choice('a'), choices: ['가'.repeat(500), '나'] })).toBe(20000);
+  });
+  test('입력형은 20초', () => {
     expect(timeLimitMs(typed(1))).toBe(20000);
+  });
+  test('띄어쓰기는 음절 수에 비례하고 상한 45초', () => {
     expect(timeLimitMs(spacing(10))).toBe(10000);
-    expect(timeLimitMs(spacing(100))).toBe(25000);
+    expect(timeLimitMs(spacing(70))).toBe(34000);
+    expect(timeLimitMs(spacing(126))).toBe(45000);
   });
 });
 

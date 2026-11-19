@@ -36,7 +36,12 @@ export function PlayScreen({ questions, onFinish, haptics = true }: Props) {
     setPhase('question');
   }, [onFinish]);
 
+  // 마감 순간의 탭과 시간 초과, 빠른 두 번 탭이 같은 문제를 두 번 처리하지 않게 한다.
+  const settledCount = useRef(0);
   const settle = useCallback((settled: Round) => {
+    if (settled.results.length <= settledCount.current) return;
+    settledCount.current = settled.results.length;
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
     setRound(settled);
     setPhase('feedback');
     const r = settled.results[settled.results.length - 1];

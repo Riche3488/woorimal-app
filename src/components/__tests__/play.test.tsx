@@ -72,3 +72,4 @@ test('방송 문제는 소제목(무엇을 고르는지)을 함께 보여 준다
   await render(<PlayScreen questions={[{ ...kbsChoice, label: '한 단어 찾기(바른 말 고르기)' }, originalChoice]} onFinish={jest.fn()} />);
   expect(screen.getByText('방송 문제 · 한 단어 찾기(바른 말 고르기)')).toBeTruthy();
 });
+
