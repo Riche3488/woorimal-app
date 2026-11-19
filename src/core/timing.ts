@@ -10,6 +10,7 @@ export function timeLimitMs(q: AppQuestion): number {
       return clamp(6000 + 60 * chars, 8000, 20000);
     }
     case 'typed': return 20000;
-    case 'spacing': return Math.min(45000, 6000 + 400 * (q.syllables?.length ?? 0));
+    // 문장을 읽고 띄울 자리를 하나씩 눌러야 하므로 넉넉히 준다(10초 + 음절당 0.7초, 15~70초).
+    case 'spacing': return clamp(10000 + 700 * (q.syllables?.length ?? 0), 15000, 70000);
   }
 }

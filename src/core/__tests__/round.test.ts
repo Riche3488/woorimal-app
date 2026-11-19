@@ -30,10 +30,11 @@ describe('timeLimitMs', () => {
   test('입력형은 20초', () => {
     expect(timeLimitMs(typed(1))).toBe(20000);
   });
-  test('띄어쓰기는 음절 수에 비례하고 상한 45초', () => {
-    expect(timeLimitMs(spacing(10))).toBe(10000);
-    expect(timeLimitMs(spacing(70))).toBe(34000);
-    expect(timeLimitMs(spacing(126))).toBe(45000);
+  test('띄어쓰기는 10초 + 음절당 0.7초, 하한 15초·상한 70초', () => {
+    expect(timeLimitMs(spacing(5))).toBe(15000);
+    expect(timeLimitMs(spacing(20))).toBe(24000);
+    expect(timeLimitMs(spacing(70))).toBe(59000);
+    expect(timeLimitMs(spacing(126))).toBe(70000);
   });
 });
 
