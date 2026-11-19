@@ -91,3 +91,19 @@ test('맞히면 지금처럼 잠깐 뒤 자동으로 넘어간다', async () => 
   await advance(1300);
   expect(screen.getByText('바른 말은?')).toBeTruthy();
 });
+
+test('오늘의 문제: 하트를 숨기고 세 번 틀려도 끝까지 푼다', async () => {
+  const onFinish = jest.fn();
+  const qs = [1, 2, 3, 4, 5].map(n => ({ ...originalChoice, key: `spelling:${n}` }));
+  await render(<PlayScreen questions={qs} onFinish={onFinish} hearts={5} showHearts={false} />);
+  expect(screen.queryAllByLabelText('남은 하트')).toHaveLength(0);
+  for (let i = 0; i < 4; i++) {
+    await fireEvent.press(screen.getByText('오똑이'));
+    await fireEvent.press(screen.getByText('눌러서 다음 문제'));
+  }
+  expect(onFinish).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByText('오뚝이'));
+  await advance(1300);
+  expect(onFinish).toHaveBeenCalledTimes(1);
+  expect(onFinish.mock.calls[0][0].results).toHaveLength(5);
+});

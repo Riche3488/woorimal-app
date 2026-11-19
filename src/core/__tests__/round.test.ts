@@ -109,3 +109,8 @@ test('beginQuestion: 해설을 보여 준 뒤 다음 문제의 시작 시각을 
   expect(r.startedAt).toBe(T0 + 2200);
   expect(remainingMs(r, T0 + 2200)).toBe(20000);
 });
+
+test('startRound에 하트 수를 줄 수 있다(오늘의 문제는 끝까지 푼다)', () => {
+  expect(startRound([], 0).hearts).toBe(START_HEARTS);
+  expect(startRound([], 0, 5).hearts).toBe(5);
+});

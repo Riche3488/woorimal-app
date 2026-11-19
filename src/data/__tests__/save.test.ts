@@ -59,3 +59,15 @@ test('finishRound가 오늘 판 수를 세고, 예전 저장에는 하루 목표
   expect(loaded.daily).toEqual({ day: null, rounds: 0 });
   expect(loaded.streak).toEqual({ days: 2, lastDay: '2026-11-18', freezes: 0 });
 });
+
+test('오늘의 문제를 끝내면 그날 칸 기록을 남기고, 일반 판은 건드리지 않는다', async () => {
+  const T0 = new Date(2026, 10, 19, 8, 0).getTime();
+  let round = startRound([q(1), q(2)], T0, 5);
+  round = answer(round, '답1', T0);
+  round = answer(round, '틀림', T0 + 1000);
+  const after = finishRound(defaultSave(), round, new Date(T0), 'challenge');
+  expect(after.challenge).toEqual({ day: '2026-11-19', marks: 'ox' });
+  expect(after.totalGrains).toBe(20);
+  expect(finishRound(after, round, new Date(T0 + 5000)).challenge).toEqual(after.challenge);
+  expect(defaultSave().challenge).toEqual({ day: null, marks: '' });
+});

@@ -13,10 +13,17 @@ import { Hearts, SourceNote, TimerBar } from './bits';
 
 export const FEEDBACK_MS = 1200;
 
-type Props = { questions: AppQuestion[]; onFinish(round: Round): void; haptics?: boolean; testMode?: boolean };
+type Props = {
+  questions: AppQuestion[];
+  onFinish(round: Round): void;
+  haptics?: boolean;
+  testMode?: boolean;
+  hearts?: number; // 오늘의 문제는 문제 수만큼 주고 숨겨서 끝까지 풀게 한다
+  showHearts?: boolean;
+};
 
-export function PlayScreen({ questions, onFinish, haptics = true, testMode = false }: Props) {
-  const [round, setRound] = useState<Round>(() => startRound(questions, Date.now()));
+export function PlayScreen({ questions, onFinish, haptics = true, testMode = false, hearts, showHearts = true }: Props) {
+  const [round, setRound] = useState<Round>(() => startRound(questions, Date.now(), hearts));
   const [phase, setPhase] = useState<'question' | 'feedback'>('question');
   const [now, setNow] = useState(() => Date.now());
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,7 +82,7 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
   return (
     <View style={s.screen}>
       <View style={s.top}>
-        <Hearts hearts={round.hearts} />
+        {showHearts ? <Hearts hearts={round.hearts} /> : <Text style={s.progress}>오늘의 문제</Text>}
         <Text style={s.progress}>{Math.min(round.index + (phase === 'question' ? 1 : 0), round.questions.length)} / {round.questions.length}</Text>
         <Text style={s.grains}>🌾 {round.grains}</Text>
       </View>

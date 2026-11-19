@@ -1,20 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { pickChallenge } from '../core/challenge';
+import { localDay } from '../core/growth';
 import { pickReviewRound, pickRound } from '../core/picker';
 import { reviewKeys } from '../core/progress';
 import type { Round } from '../core/round';
 import type { AppPack, AppQuestion } from '../core/types';
 import { loadPack, refreshPack } from '../data/pack-store';
-import { defaultSave, finishRound, loadSave, writeSave, type SaveData, type Settings } from '../data/save';
+import { defaultSave, finishRound, loadSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 
 export type Game = {
   pack: AppPack;
   save: SaveData;
   reviewCount: number;
   lastRound: Round | null;
+  lastMode: RoundMode;
   previousSave: SaveData | null; // 결과 화면에서 레벨업·곳간 변화를 비교하려고 판 직전 저장을 둔다
   startNormal(): AppQuestion[];
   startReview(): AppQuestion[];
-  complete(round: Round): void;
+  startChallenge(): AppQuestion[]; // 오늘 날짜로 정해진 5문제
+  complete(round: Round, mode?: RoundMode): void;
   updateSettings(patch: Partial<Settings>): void;
   resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
 };
@@ -35,6 +39,7 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
   const [save, setSave] = useState<SaveData>(defaultSave());
   const [ready, setReady] = useState(false);
   const [lastRound, setLastRound] = useState<Round | null>(null);
+  const [lastMode, setLastMode] = useState<RoundMode>('normal');
   const [previousSave, setPreviousSave] = useState<SaveData | null>(null);
   const nextPack = useRef<AppPack | null>(null);
 
@@ -66,11 +71,14 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
   const startNormal = useCallback(() => pickRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
   const startReview = useCallback(() => pickReviewRound(currentPack().questions, save.progress), [currentPack, save.progress]);
 
-  const complete = useCallback((round: Round) => {
+  const startChallenge = useCallback(() => pickChallenge(currentPack().questions, localDay(new Date())), [currentPack]);
+
+  const complete = useCallback((round: Round, mode: RoundMode = 'normal') => {
     setPreviousSave(save);
-    const next = finishRound(save, round, new Date());
+    const next = finishRound(save, round, new Date(), mode);
     setSave(next);
     setLastRound(round);
+    setLastMode(mode);
     writeSave(next).catch(() => {});
   }, [save]);
 
@@ -96,7 +104,7 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
 
   if (!ready || !pack) return <>{fallback}</>;
   return (
-    <GameContext.Provider value={{ pack, save, reviewCount, lastRound, previousSave, startNormal, startReview, complete, updateSettings, resetRecords }}>
+    <GameContext.Provider value={{ pack, save, reviewCount, lastRound, lastMode, previousSave, startNormal, startReview, startChallenge, complete, updateSettings, resetRecords }}>
       {children}
     </GameContext.Provider>
   );

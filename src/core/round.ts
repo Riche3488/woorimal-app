@@ -27,8 +27,8 @@ export type Round = {
   results: RoundResult[];
 };
 
-export function startRound(questions: AppQuestion[], now: number): Round {
-  return { questions, index: 0, hearts: START_HEARTS, streak: 0, grains: 0, startedAt: now, results: [] };
+export function startRound(questions: AppQuestion[], now: number, hearts = START_HEARTS): Round {
+  return { questions, index: 0, hearts, streak: 0, grains: 0, startedAt: now, results: [] };
 }
 
 export function grainsFor(correct: boolean, remainingRatio: number, streakAfter: number): number {

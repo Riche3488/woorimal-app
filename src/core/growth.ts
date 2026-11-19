@@ -31,7 +31,7 @@ export function localDay(date: Date): string {
 }
 
 // 'YYYY-MM-DD' 두 날짜 사이의 일 수(달력 기준, 시간대와 무관).
-function dayDiff(from: string, to: string): number {
+export function dayDiff(from: string, to: string): number {
   const toUtc = (d: string) => { const [y, m, day] = d.split('-').map(Number); return Date.UTC(y, m - 1, day); };
   return Math.round((toUtc(to) - toUtc(from)) / 86_400_000);
 }

@@ -1,17 +1,18 @@
 // 결과: 정답 수·정답률·얻은 낱알, 경험치 바, 레벨업·곳간 변화 연출, 다음 목표 안내, 틀린 문제 보기.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Barn, Squirrel } from '../components/bits';
+import { challengeNumber, marksToEmoji, shareText } from '../core/challenge';
 import { resultNudges, todayRounds } from '../core/goals';
-import { barnFor, freezesUsed, levelFor, localDay } from '../core/growth';
+import { barnFor, currentStreak, freezesUsed, levelFor, localDay } from '../core/growth';
 import { sourceNote } from '../core/labels';
 import { useGame } from '../state/GameProvider';
 import { C, R } from '../ui/theme';
 
 export default function Result() {
-  const { lastRound, previousSave, save } = useGame();
+  const { lastRound, lastMode, previousSave, save } = useGame();
   const [showWrong, setShowWrong] = useState(false);
   const before = levelFor(previousSave?.totalGrains ?? 0);
   const after = levelFor(save.totalGrains);
@@ -46,6 +47,9 @@ export default function Result() {
     freezesUsed: used,
     freezeEarned: (save.streak.freezes ?? 0) > (previousSave?.streak.freezes ?? 0) - used,
   });
+  const share = () => {
+    Share.share({ message: shareText({ day: today, marks: save.challenge.marks, streak: currentStreak(save.streak, today) }) }).catch(() => {});
+  };
   const wrong = lastRound.results
     .map((r, i) => ({ r, q: lastRound.questions[i] }))
     .filter(x => !x.r.correct);
@@ -53,7 +57,17 @@ export default function Result() {
   return (
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.heading}>{lastRound.hearts === 0 ? '하트를 다 썼어요' : '한 판 끝!'}</Text>
+        <Text style={s.heading}>
+          {lastMode === 'challenge' ? `오늘의 문제 #${challengeNumber(today)}` : lastRound.hearts === 0 ? '하트를 다 썼어요' : '한 판 끝!'}
+        </Text>
+        {lastMode === 'challenge' && (
+          <View style={s.share}>
+            <Text style={s.marks} accessibilityLabel="오늘의 문제 결과">{marksToEmoji(save.challenge.marks)}</Text>
+            <Pressable onPress={share} style={({ pressed }) => [s.shareBtn, pressed && s.pressed]} accessibilityRole="button">
+              <Text style={s.shareText}>결과 공유</Text>
+            </Pressable>
+          </View>
+        )}
 
         <View style={s.stats}>
           <Stat label="정답" value={`${correct} / ${total}`} />
@@ -121,6 +135,10 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   content: { padding: 20, gap: 18 },
   heading: { fontSize: 26, fontWeight: '800', color: C.ink, textAlign: 'center', marginTop: 12 },
+  share: { alignItems: 'center', gap: 10 },
+  marks: { fontSize: 30, letterSpacing: 4 },
+  shareBtn: { backgroundColor: C.grain, borderRadius: R.button, paddingVertical: 12, paddingHorizontal: 28 },
+  shareText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   stats: { flexDirection: 'row', gap: 10 },
   stat: { flex: 1, backgroundColor: C.card, borderRadius: R.card, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: C.line },
   statValue: { fontSize: 22, fontWeight: '800', color: C.ink },

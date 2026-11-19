@@ -1,8 +1,9 @@
 // 홈: 다람쥐·곳간·연속 기록·오늘 목표·도토리, 한 판 시작, 틀린 문제 다시 풀기.
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Barn, Squirrel } from '../components/bits';
+import { CHALLENGE_SIZE, challengeNumber, markScore, marksToEmoji, shareText } from '../core/challenge';
 import { DAILY_GOAL, todayRounds } from '../core/goals';
 import { currentStreak, levelFor, localDay } from '../core/growth';
 import { useGame } from '../state/GameProvider';
@@ -15,6 +16,11 @@ export default function Home() {
   const streak = currentStreak(save.streak, today);
   const done = todayRounds(save.daily, today);
   const freezes = save.streak.freezes ?? 0;
+  const challengeDone = save.challenge.day === today;
+  const openChallenge = () => {
+    if (!challengeDone) router.push({ pathname: '/play', params: { mode: 'challenge' } });
+    else Share.share({ message: shareText({ day: today, marks: save.challenge.marks, streak }) }).catch(() => {});
+  };
 
   return (
     <SafeAreaView style={s.screen}>
@@ -44,6 +50,14 @@ export default function Home() {
       </View>
 
       <View style={s.actions}>
+        <Pressable onPress={openChallenge} style={({ pressed }) => [s.challenge, pressed && s.pressed]} accessibilityRole="button">
+          <Text style={s.challengeTitle}>📅 오늘의 문제 #{challengeNumber(today)}</Text>
+          <Text style={s.challengeSub}>
+            {challengeDone
+              ? `${marksToEmoji(save.challenge.marks)} ${markScore(save.challenge.marks)}/${save.challenge.marks.length} · 공유하기`
+              : `모두에게 같은 ${CHALLENGE_SIZE}문제 · 하루 한 번`}
+          </Text>
+        </Pressable>
         <Pressable onPress={() => router.push({ pathname: '/play', params: { mode: 'normal' } })}
           style={({ pressed }) => [s.primary, pressed && s.pressed]} accessibilityRole="button">
           <Text style={s.primaryText}>▶ 한 판 시작</Text>
@@ -77,6 +91,9 @@ const s = StyleSheet.create({
   dotOn: { backgroundColor: C.grain },
   acorn: { fontSize: 14, color: C.sub, fontWeight: '700', marginLeft: 8 },
   actions: { gap: 12, paddingBottom: 24 },
+  challenge: { backgroundColor: C.grainSoft, borderRadius: R.card, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1.5, borderColor: C.grain },
+  challengeTitle: { color: C.ink, fontSize: 17, fontWeight: '800' },
+  challengeSub: { color: C.sub, fontSize: 14, marginTop: 4, fontWeight: '600' },
   primary: { backgroundColor: C.ink, borderRadius: R.card, paddingVertical: 20, alignItems: 'center' },
   primaryText: { color: '#fff', fontSize: 20, fontWeight: '800' },
   primarySub: { color: C.grainSoft, fontSize: 13, marginTop: 4 },
