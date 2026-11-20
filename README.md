@@ -50,7 +50,7 @@ npx eas-cli build -p android --profile preview      # 설치용 APK
 npx eas-cli build -p android --profile production   # Play 스토어용 AAB
 ```
 
-패키지 이름 `kr.co.woorimalcontest.app`. 아이콘·스플래시 그림은 아직 Expo 기본 자리 표시자다.
+패키지 이름 `kr.co.woorimalcontest.app`. 아이콘·스플래시는 다람쥐 캐릭터(만든 방법: `docs/design/assets.md`).
 
 ## 테스트 모드 (답을 몰라도 기능 확인)
 

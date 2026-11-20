@@ -1,4 +1,4 @@
-import { xpForLevel, levelFor, barnFor, BARN_STAGES, bumpStreak, currentStreak, localDay, freezesUsed, MAX_FREEZES } from '../growth';
+import { xpForLevel, levelFor, barnFor, barnStage, BARN_STAGES, bumpStreak, currentStreak, localDay, freezesUsed, MAX_FREEZES } from '../growth';
 
 test('xpForLevel: Lv1=0, Lv2=50, Lv3=150', () => {
   expect(xpForLevel(1)).toBe(0);
@@ -18,6 +18,11 @@ test('barnFor: 초가 → 기와 → 큰 곳간', () => {
   expect(barnFor(4).name).toBe('초가 곳간');
   expect(barnFor(5).name).toBe('기와 곳간');
   expect(barnFor(12).name).toBe('큰 곳간');
+});
+
+test('barnStage: 그림을 고르는 곳간 단계 번호(0·1·2)', () => {
+  expect([1, 4, 5, 11, 12, 40].map(barnStage)).toEqual([0, 0, 1, 1, 2, 2]);
+  expect(barnStage(0)).toBe(0);
 });
 
 describe('연속 기록', () => {

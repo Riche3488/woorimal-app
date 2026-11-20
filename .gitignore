@@ -31,6 +31,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -42,3 +43,6 @@ example
 /ios
 /android
 .superpowers/
+
+# 생성 자산 원본(PNG). 앱에는 assets/art/*.webp만 넣는다
+assets/art/src/

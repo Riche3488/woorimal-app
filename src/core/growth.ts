@@ -20,6 +20,11 @@ export function barnFor(level: number) {
   return [...BARN_STAGES].reverse().find(s => level >= s.from) ?? BARN_STAGES[0];
 }
 
+// 곳간 그림·영상을 고르는 단계 번호(0: 초가, 1: 기와, 2: 큰 곳간).
+export function barnStage(level: number): number {
+  return BARN_STAGES.indexOf(barnFor(level));
+}
+
 // 도토리(freezes): 하루 빠져도 연속 기록을 지켜 주는 보호권. 연속 7의 배수 날마다 1개, 최대 2개.
 export const MAX_FREEZES = 2;
 export const FREEZE_EVERY = 7;
