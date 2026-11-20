@@ -3,18 +3,31 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { creditLines } from '../core/labels';
+import { REMINDER_HOURS } from '../core/reminder';
+import { requestReminderPermission } from '../data/reminder';
 import { useGame } from '../state/GameProvider';
 import { C, paperCard, T } from '../ui/theme';
 
 // 묶음 정보 줄을 이만큼 연달아 누르면 테스트 모드 스위치가 나타난다.
 const UNLOCK_TAPS = 7;
 
+const hourLabel = (h: number) => (h < 12 ? `오전 ${h}시` : `오후 ${h === 12 ? 12 : h - 12}시`);
+
 export default function Settings() {
   const { pack, save, updateSettings, resetRecords } = useGame();
   const [taps, setTaps] = useState(0);
   const showTest = save.settings.testMode || taps >= UNLOCK_TAPS;
 
-  const confirmReset = () => Alert.alert('기록 초기화', '낱알·레벨·문제 기록을 모두 지웁니다.', [
+  // 켤 때 알림 권한을 묻는다. 거절하면 켜지 않는다.
+  const toggleReminder = async (on: boolean) => {
+    if (on && !(await requestReminderPermission().catch(() => false))) {
+      Alert.alert('알림을 켤 수 없어요', '휴대폰 설정에서 우리말 곳간의 알림을 허용해 주세요.');
+      return;
+    }
+    updateSettings({ reminder: on });
+  };
+
+  const confirmReset =() => Alert.alert('기록 초기화', '낱알·레벨·문제 기록을 모두 지웁니다.', [
     { text: '취소', style: 'cancel' },
     { text: '초기화', style: 'destructive', onPress: resetRecords },
   ]);
@@ -39,6 +52,27 @@ export default function Settings() {
           </View>
           <Switch value={save.settings.choiceMode} onValueChange={v => updateSettings({ choiceMode: v })}
             trackColor={{ true: C.grain, false: C.line }} accessibilityLabel="보기로 풀기" />
+        </View>
+        <View style={[s.row, { flexDirection: 'column', alignItems: 'stretch' }]}>
+          <View style={s.inline}>
+            <View style={{ flexShrink: 1 }}>
+              <Text style={s.label}>학습 알림</Text>
+              <Text style={s.desc}>하루 한 번, 복습할 문제나 연속 기록을 알려 드려요</Text>
+            </View>
+            <Switch value={save.settings.reminder} onValueChange={toggleReminder}
+              trackColor={{ true: C.grain, false: C.line }} accessibilityLabel="학습 알림" />
+          </View>
+          {save.settings.reminder ? (
+            <View style={s.hours}>
+              {REMINDER_HOURS.map(h => (
+                <Pressable key={h} onPress={() => updateSettings({ reminderHour: h })} accessibilityRole="button"
+                  accessibilityState={{ selected: save.settings.reminderHour === h }}
+                  style={[s.hour, save.settings.reminderHour === h && s.hourOn]}>
+                  <Text style={[s.hourText, save.settings.reminderHour === h && s.hourTextOn]}>{hourLabel(h)}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
         {showTest ? (
           <>
@@ -75,6 +109,12 @@ const s = StyleSheet.create({
   row: { ...paperCard, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: 16 },
   label: { fontSize: 16, color: C.ink, fontWeight: '600' },
   desc: { fontSize: 12, color: C.sub, marginTop: 2 },
+  inline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  hours: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  hour: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: C.line, backgroundColor: C.bg },
+  hourOn: { backgroundColor: C.grain, borderColor: C.grain },
+  hourText: { fontSize: 13, color: C.sub, fontWeight: '700' },
+  hourTextOn: { color: C.ink },
   info: { marginTop: 12, gap: 4 },
   infoText: { fontSize: 12, color: C.faint },
 });

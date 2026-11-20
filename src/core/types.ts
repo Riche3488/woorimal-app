@@ -22,12 +22,26 @@ export type AppQuestion = {
   label?: string; // 방송 문제 소제목(무엇을 고르는지)
 };
 
+// 오늘의 낱말 카드(웹 자체 학습 낱말). question은 카드 아래에서 푸는 쓰임 문제의 key.
+export type AppCard = {
+  key: string;
+  word: string;
+  title: string;
+  pos: string;
+  meaning: string;
+  explain: string;
+  tip: string;
+  examples: string[];
+  question: string;
+};
+
 export type AppPack = {
   schema: 1;
   version: string;
   generatedAt: string;
   counts: Record<string, number>;
   questions: AppQuestion[];
+  cards?: AppCard[]; // 선택 필드: 없으면 오늘의 낱말을 숨긴다
   minApp?: number; // 이 묶음을 읽으려면 필요한 앱 수준(APP_PACK_COMPAT)
   shrink?: boolean; // 문제 수를 일부러 크게 줄인 배포(예: 출처 일괄 제외)
 };

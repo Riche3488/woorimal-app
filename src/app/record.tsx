@@ -2,6 +2,7 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { wordCollection } from '../core/collection';
 import { currentStreak, levelFor, localDay } from '../core/growth';
 import { TYPE_LABELS } from '../core/labels';
 import { typeAccuracy } from '../core/progress';
@@ -32,6 +33,13 @@ export default function Record() {
           <Item label="연속" value={`${currentStreak(save.streak, localDay(new Date()))}일`} />
           <Item label="푼 문제" value={`${solved}`} />
         </View>
+
+        <Pressable onPress={() => router.push('/collection')} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]} accessibilityRole="button">
+          <View style={s.rowTop}>
+            <Text style={s.rowLabel}>곳간 낱말</Text>
+            <Text style={s.rowValue}>외운 낱말 {wordCollection(save.progress, pack.questions).mastered.length}개  <Text style={s.practice}>보기 ›</Text></Text>
+          </View>
+        </Pressable>
 
         <Text style={s.section}>유형별 정답률 (약한 유형부터 · 누르면 연습)</Text>
         {rows.length === 0 && (

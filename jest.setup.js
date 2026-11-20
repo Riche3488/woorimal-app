@@ -33,3 +33,15 @@ jest.mock('react-native-reanimated', () => {
     interpolateColor: (v, input, output) => output[v >= input[input.length - 1] ? output.length - 1 : 0],
   };
 });
+
+// 기기 알림: Jest에는 네이티브 모듈이 없으므로 예약 함수를 빈 모의 함수로 둔다.
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn(async () => null),
+  getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+  cancelAllScheduledNotificationsAsync: jest.fn(async () => {}),
+  scheduleNotificationAsync: jest.fn(async () => 'id'),
+  AndroidImportance: { DEFAULT: 3 },
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+}));

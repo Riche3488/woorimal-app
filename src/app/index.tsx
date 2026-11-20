@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withDelay
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HeroScene, PressableScale } from '../components/art';
 import { AcornIcon, GrainIcon } from '../components/bits';
+import { cardOfDay } from '../core/cards';
 import { CHALLENGE_SIZE, challengeNumber, markScore, marksToEmoji, shareText } from '../core/challenge';
 import { DAILY_GOAL, todayRounds } from '../core/goals';
 import { barnFor, barnStage, currentStreak, levelFor, localDay } from '../core/growth';
@@ -14,13 +15,15 @@ import { DUR, EASE, enterUp } from '../ui/motion';
 import { C, elevation, paperCard, R, T } from '../ui/theme';
 
 export default function Home() {
-  const { save, counts } = useGame();
+  const { pack, save, counts } = useGame();
   const lv = levelFor(save.totalGrains);
   const today = localDay(new Date());
   const streak = currentStreak(save.streak, today);
   const done = todayRounds(save.daily, today);
   const freezes = save.streak.freezes ?? 0;
   const challengeDone = save.challenge.day === today;
+  const card = cardOfDay(pack.cards, today);
+  const cardDone = save.card.day === today;
   const haptic = save.settings.haptics;
   const openChallenge = () => {
     if (!challengeDone) router.push({ pathname: '/play', params: { mode: 'challenge' } });
@@ -85,6 +88,16 @@ export default function Home() {
             <Text style={s.chev}>›</Text>
           </PressableScale>
         </Animated.View>
+        {card ? (
+          <Animated.View entering={enterUp(2)}>
+            <Pressable onPress={() => router.push('/card')} style={s.wordRow} accessibilityRole="button"
+              accessibilityLabel={`오늘의 낱말 ${card.word}${cardDone ? ', 풀었어요' : ''}`}>
+              <Text style={s.wordLabel}>오늘의 낱말</Text>
+              <Text style={s.wordText} numberOfLines={1}>{card.word}</Text>
+              <Text style={[s.wordState, cardDone && { color: C.good }]}>{cardDone ? '✓ 풀었어요' : '읽고 풀기 ›'}</Text>
+            </Pressable>
+          </Animated.View>
+        ) : null}
         <Animated.View entering={enterUp(3)}>
           <PressableScale onPress={() => router.push({ pathname: '/play', params: { mode: 'normal' } })} haptic={haptic}
             style={s.primary} accessibilityRole="button">
@@ -150,6 +163,10 @@ const s = StyleSheet.create({
   challengeTitle: { ...T.heading, fontSize: 17 },
   challengeSub: { color: C.sub, fontSize: 13, marginTop: 3, fontWeight: '600' },
   chev: { fontSize: 26, color: C.grain, fontWeight: '300' },
+  wordRow: { ...paperCard, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14 },
+  wordLabel: { fontSize: 12, color: C.accent, fontWeight: '800' },
+  wordText: { flex: 1, fontFamily: T.num.fontFamily, fontSize: 18, color: C.ink },
+  wordState: { fontSize: 13, color: C.sub, fontWeight: '700' },
   primary: { backgroundColor: C.ink, borderRadius: R.card, paddingVertical: 18, alignItems: 'center', borderBottomWidth: 4, borderBottomColor: '#120D09', ...elevation(2) },
   primaryText: { fontFamily: T.num.fontFamily, color: C.grainLight, fontSize: 23, lineHeight: 30 },
   primarySub: { color: '#D9CBB4', fontSize: 13, marginTop: 2, fontWeight: '600' },

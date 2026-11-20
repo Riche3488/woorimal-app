@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadSave, writeSave, finishRound, defaultSave, toggleStarSave, SAVE_KEY } from '../save';
+import { loadSave, writeSave, finishRound, finishCard, defaultSave, toggleStarSave, SAVE_KEY } from '../save';
 import { startRound, answer } from '../../core/round';
 import type { AppQuestion } from '../../core/types';
 
@@ -43,7 +43,7 @@ test('테스트 모드는 기본으로 꺼져 있고, 예전 저장을 읽어도
   const old = { ...defaultSave(), settings: { haptics: false, sound: true } };
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(old));
   const loaded = await loadSave();
-  expect(loaded.settings).toEqual({ haptics: false, sound: true, testMode: false, choiceMode: false });
+  expect(loaded.settings).toEqual({ haptics: false, sound: true, testMode: false, choiceMode: false, reminder: false, reminderHour: 19 });
 });
 
 test('finishRound가 오늘 판 수를 세고, 예전 저장에는 하루 목표·도토리 기본값을 채운다', async () => {
@@ -99,4 +99,22 @@ test('깨진 문제 기록 하나 때문에 저장 전체를 잃지 않는다', 
   expect(Object.keys(loaded.progress.stats).sort()).toEqual(['meaning:3', 'meaning:4']);
   expect(loaded.progress.stats['meaning:3']).toMatchObject({ seen: 0, correct: 0, box: 1, wrong: 1 });
   expect(loaded.progress.stats['meaning:4']).toMatchObject({ box: 1, wrong: 1 });
+});
+
+test('finishCard: 오늘 카드를 푼 날을 남기고 문제 기록만 쌓는다(판·낱알·하루 목표는 그대로)', () => {
+  const now = new Date(2026, 10, 20, 9);
+  const result = { key: 'usage:word-32', type: 'usage', correct: false, timedOut: false, gaveUp: false, synonymHit: false, userAnswer: '틀린 문장', elapsedMs: 0, grains: 0 };
+  const next = finishCard(defaultSave(), result, now);
+  expect(next.card).toEqual({ day: '2026-11-20' });
+  expect(next.progress.stats['usage:word-32'].needsReview).toBe(true);
+  expect(next).toMatchObject({ rounds: 0, totalGrains: 0, daily: { day: null, rounds: 0 } });
+});
+
+test('예전 저장(카드·알림 설정 없음)도 기본값으로 채워 읽는다', async () => {
+  const old = { ...defaultSave(), settings: { haptics: true, sound: true, testMode: false } } as Record<string, unknown>;
+  delete old.card;
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(old));
+  const loaded = await loadSave();
+  expect(loaded.card).toEqual({ day: null });
+  expect(loaded.settings).toMatchObject({ reminder: false, reminderHour: 19, choiceMode: false });
 });

@@ -1,13 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { pickChallenge } from '../core/challenge';
 import { withChoiceMode } from '../core/choices';
-import { localDay } from '../core/growth';
+import { addDays, currentStreak, localDay } from '../core/growth';
 import { pickReviewRound, pickRound, pickStarredRound, pickTypeRound } from '../core/picker';
 import { notebookCounts } from '../core/progress';
-import type { Round } from '../core/round';
+import { planReminder } from '../core/reminder';
+import type { Round, RoundResult } from '../core/round';
 import type { AppPack, AppQuestion, QuestionType } from '../core/types';
 import { loadPack, refreshPack } from '../data/pack-store';
-import { defaultSave, finishRound, loadSave, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
+import { scheduleReminder } from '../data/reminder';
+import { defaultSave, finishCard, finishRound, loadSave, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 
 export type Game = {
   pack: AppPack;
@@ -24,6 +26,7 @@ export type Game = {
   toggleStar(key: string): void;
   startChallenge(): AppQuestion[]; // 오늘 날짜로 정해진 5문제
   complete(round: Round, mode?: RoundMode): void;
+  answerCard(result: RoundResult): void; // 오늘의 낱말 확인 문제
   updateSettings(patch: Partial<Settings>): void;
   resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
 };
@@ -128,11 +131,33 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
     setPreviousSave(null);
   }, []);
 
+  const answerCard = useCallback((result: RoundResult) => {
+    setSave(prev => {
+      const next = finishCard(prev, result, new Date());
+      writeSave(next).catch(() => {});
+      return next;
+    });
+  }, []);
+
   const counts = useMemo(() => (pack ? notebookCounts(save.progress, pack.questions, localDay(new Date())) : { review: 0, due: 0, starred: 0, mastered: 0 }), [pack, save.progress]);
+
+  // 학습 알림: 기록·설정이 바뀔 때마다 다음 한 번을 다시 예약한다(끄면 지운다).
+  const { reminder, reminderHour } = save.settings;
+  useEffect(() => {
+    if (!ready || !pack) return;
+    const now = new Date();
+    const today = localDay(now);
+    const plan = reminder ? planReminder({
+      now, hour: reminderHour, playedToday: save.streak.lastDay === today,
+      dueToday: counts.due, dueTomorrow: notebookCounts(save.progress, pack.questions, addDays(today, 1)).due,
+      streak: currentStreak(save.streak, today),
+    }) : null;
+    scheduleReminder(plan).catch(() => {});
+  }, [ready, pack, reminder, reminderHour, save.streak, save.progress, counts.due]);
 
   if (!ready || !pack) return <>{fallback}</>;
   return (
-    <GameContext.Provider value={{ pack, save, counts, lastRound, lastMode, previousSave, lastPracticeType, startNormal, startReview, startStarred, startPractice, toggleStar, startChallenge, complete, updateSettings, resetRecords }}>
+    <GameContext.Provider value={{ pack, save, counts, lastRound, lastMode, previousSave, lastPracticeType, startNormal, startReview, startStarred, startPractice, toggleStar, startChallenge, complete, answerCard, updateSettings, resetRecords }}>
       {children}
     </GameContext.Provider>
   );

@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "kr.co.woorimalcontest.app",
       "versionCode": 1,
-      "permissions": []
+      "permissions": ["android.permission.POST_NOTIFICATIONS"]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -35,7 +35,8 @@
           "imageWidth": 180
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,4 +1,4 @@
-import type { AppPack, AppQuestion } from './types';
+import type { AppCard, AppPack, AppQuestion } from './types';
 
 export const PACK_BASE_URL = 'https://woorimal-contest.co.kr/app/';
 // 이 앱이 읽을 수 있는 묶음 수준. 묶음의 minApp이 이보다 크면 새 앱이 필요한 묶음이라 받지 않는다.
@@ -23,12 +23,17 @@ function validQuestion(q: any): q is AppQuestion {
   }
 }
 
+const CARD_TEXT = ['key', 'word', 'title', 'pos', 'meaning', 'explain', 'tip', 'question'] as const;
+const validCard = (c: any): c is AppCard => !!c && CARD_TEXT.every(f => isStr(c[f])) && isStrList(c.examples);
+
 export function parsePack(raw: unknown): AppPack | null {
   const p = raw as any;
   if (!p || p.schema !== 1 || !isStr(p.version) || !isStr(p.generatedAt) || !Array.isArray(p.questions)) return null;
   if (typeof p.minApp === 'number' && p.minApp > APP_PACK_COMPAT) return null;
   if (!p.questions.length || !p.questions.every(validQuestion)) return null;
   if (new Set(p.questions.map((q: AppQuestion) => q.key)).size !== p.questions.length) return null;
+  // 카드는 선택 필드: 잘못된 카드만 빼고 묶음은 받는다.
+  if (p.cards !== undefined) return { ...p, cards: Array.isArray(p.cards) ? p.cards.filter(validCard) : [] } as AppPack;
   return p as AppPack;
 }
 

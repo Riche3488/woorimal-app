@@ -138,3 +138,19 @@ describe('refreshPack', () => {
     expect(fetchFn.mock.calls[1][0]).toBe('https://woorimal-contest.co.kr/app/pack.json');
   });
 });
+
+describe('parsePack: 오늘의 낱말 카드(선택 필드)', () => {
+  const base = () => ({ schema: 1, version: 'v', generatedAt: '2026-11-20T00:00:00Z', questions: [
+    { key: 'usage:a', type: 'usage', kind: 'choice', prompt: 'p', answer: 'x', choices: ['x', 'y'], explain: '', source: 'original', easy: true },
+  ] });
+  const card = { key: 'card:a', word: '겉돌다', title: 't', pos: '동사', meaning: 'm', explain: 'e', tip: 't', examples: ['예'], question: 'usage:a' };
+  test('카드가 없어도, 있어도 받는다', () => {
+    expect(parsePack(base())!.cards).toBeUndefined();
+    expect(parsePack({ ...base(), cards: [card] })!.cards).toEqual([card]);
+  });
+  test('잘못된 카드만 빼고 묶음은 받는다', () => {
+    const p = parsePack({ ...base(), cards: [card, { ...card, key: 'card:b', examples: [] }, null] });
+    expect(p!.cards).toEqual([card]);
+    expect(parsePack({ ...base(), cards: 'x' })!.cards).toEqual([]);
+  });
+});
