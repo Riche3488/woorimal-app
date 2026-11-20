@@ -37,7 +37,7 @@ function game(over: Partial<SaveData> = {}, extra: Partial<Game> = {}): Game {
     counts: notebookCounts(save.progress, questions, localDay(new Date())),
     lastRound: null, lastMode: 'normal', previousSave: null, lastPracticeType: null,
     startNormal: jest.fn(), startReview: jest.fn(), startStarred: jest.fn(), startPractice: jest.fn(), startChallenge: jest.fn(),
-    toggleStar: jest.fn(), complete: jest.fn(), answerCard: jest.fn(), updateCrossword: jest.fn(), updateSettings: jest.fn(), resetRecords: jest.fn(), ...extra,
+    toggleStar: jest.fn(), complete: jest.fn(), answerCard: jest.fn(), updateCrossword: jest.fn(), makePuzzle: jest.fn(), updateSettings: jest.fn(), resetRecords: jest.fn(), ...extra,
   };
 }
 const show = (el: React.ReactElement, g: Game) => render(<GameContextProvider value={g}>{el}</GameContextProvider>);

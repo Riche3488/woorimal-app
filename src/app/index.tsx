@@ -114,11 +114,10 @@ export default function Home() {
                 ? <View style={s.dueBadge}><Text style={s.dueText}>오늘 복습 {counts.due}</Text></View>
                 : <Text style={s.secondarySub}>오늘 복습 {counts.due}</Text>}
             </PressableScale>
-            {pack.crosswords?.length ? (
-              <PressableScale onPress={() => router.push('/puzzles')} style={[s.secondary, { flex: 1 }]} accessibilityRole="button">
-                <Text style={s.secondaryText}>가로세로 퍼즐</Text>
-              </PressableScale>
-            ) : null}
+            {/* 묶음에 주제 퍼즐이 없어도 조합 퍼즐은 만들 수 있으므로 늘 보인다. */}
+            <PressableScale onPress={() => router.push('/puzzles')} style={[s.secondary, { flex: 1 }]} accessibilityRole="button">
+              <Text style={s.secondaryText}>가로세로 퍼즐</Text>
+            </PressableScale>
           </Animated.View>
         </View>
       </ScrollView>

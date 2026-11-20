@@ -1,5 +1,6 @@
 // 가로세로 퍼즐 한 판: 판을 작게 보여 주고, 고른 낱말의 힌트를 보며 낱말을 통째로 입력한다.
-// 이미 채워진 칸(엇갈리는 낱말·글자 보기)은 입력 모양(운○○)으로 알려 준다. 다 풀면 학습 안내를 보여 준다.
+// 이미 채워진 칸(엇갈리는 낱말·글자 보기)은 입력 모양(운○○)으로 알려 준다. 초성 보기는 빈칸을 초성으로(운ㄷㅎ) 보여 준다.
+// 묶음의 판과 기기에서 만든 조합 퍼즐(save.madeCrosswords)을 같은 화면에서 푼다. 다 풀면 학습 안내를 보여 준다.
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -7,7 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Shake } from '../components/art';
 import {
-  boardLetters, buildGrid, cellKey, CROSSWORD_GRAINS, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, revealLetter, solveEntry,
+  boardChosung, boardLetters, buildGrid, cellKey, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, revealLetter, showChosung, solveEntry,
 } from '../core/crossword';
 import { useGame } from '../state/GameProvider';
 import { C, paperCard, R, T } from '../ui/theme';
@@ -17,14 +18,14 @@ const GUTTER = 18;
 export default function Puzzle() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { pack, save, updateCrossword } = useGame();
-  const board = pack.crosswords?.find(b => b.id === id);
+  const board = pack.crosswords?.find(b => b.id === id) ?? save.madeCrosswords.find(b => b.id === id);
   const { width } = useWindowDimensions();
   const grid = useMemo(() => (board ? buildGrid(board) : null), [board]);
   const progress = (board && save.crosswords[board.id]) || emptyCrossword();
   const firstOpen = board ? board.entries.findIndex((_, i) => !progress.solved.includes(i)) : -1;
   const [selected, setSelected] = useState(Math.max(0, firstOpen));
   const [text, setText] = useState('');
-  const [feedback, setFeedback] = useState<{ ok: boolean; n: number } | null>(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; n: number; grains: number } | null>(null);
 
   if (!board || !grid) {
     return (
@@ -36,6 +37,7 @@ export default function Puzzle() {
   }
 
   const letters = boardLetters(board, progress);
+  const hints = boardChosung(board, progress);
   const done = isComplete(board, progress);
   const entry = board.entries[selected];
   const selectedCells = new Set(entryCells(entry).map(([r, c]) => cellKey(r, c)));
@@ -54,7 +56,7 @@ export default function Puzzle() {
   const submit = () => {
     if (solvedHere || !text.trim()) return;
     const r = solveEntry(board, progress, selected, text);
-    setFeedback(f => ({ ok: r.correct, n: (f?.n ?? 0) + 1 }));
+    setFeedback(f => ({ ok: r.correct, n: (f?.n ?? 0) + 1, grains: r.grains }));
     if (!r.correct) return;
     if (save.settings.haptics) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     updateCrossword(board.id, r.progress, r.grains);
@@ -66,6 +68,12 @@ export default function Puzzle() {
     const next = revealLetter(board, progress, selected);
     if (next !== progress) updateCrossword(board.id, next, 0);
   };
+  const chosung = () => {
+    const next = showChosung(board, progress, selected);
+    if (next !== progress) updateCrossword(board.id, next, 0);
+  };
+  const chosungShown = progress.chosung?.includes(selected) ?? false;
+  const pattern = entryPattern(board, selected, letters, progress);
 
   const clueList = (dir: 'across' | 'down') => board.entries
     .map((e, i) => ({ e, i }))
@@ -89,7 +97,8 @@ export default function Puzzle() {
               <Pressable key={k} onPress={() => tapCell(r, c)} accessibilityLabel={`${r + 1}행 ${c + 1}열${ch ? ` ${ch}` : ''}`}
                 style={[s.cell, { left: c * cell, top: r * cell, width: cell, height: cell }, selectedCells.has(k) && !done && s.cellOn]}>
                 {g.num !== undefined ? <Text style={[s.num, { fontSize: Math.max(8, cell * 0.24) }]}>{g.num}</Text> : null}
-                {ch ? <Text style={[s.letter, { fontSize: cell * 0.5 }, progress.revealed[k] && s.letterHelp]}>{ch}</Text> : null}
+                {ch ? <Text style={[s.letter, { fontSize: cell * 0.5 }, progress.revealed[k] && s.letterHelp]}>{ch}</Text>
+                  : hints[k] ? <Text style={[s.hint, { fontSize: cell * 0.42 }]}>{hints[k]}</Text> : null}
               </Pressable>
             );
           }))}
@@ -98,7 +107,7 @@ export default function Puzzle() {
         {done ? (
           <View style={s.doneCard}>
             <Text style={s.doneTitle}>다 풀었어요!</Text>
-            <Text style={s.doneSub}>낱말 {board.entries.length}개 · 글자 보기 {progress.helps}번</Text>
+            <Text style={s.doneSub}>낱말 {board.entries.length}개 · 힌트 {progress.helps}번</Text>
             {board.intro ? <Text style={s.body}>{board.intro}</Text> : null}
             {board.notes.map(n => (
               <View key={n.title} style={s.note}>
@@ -112,7 +121,7 @@ export default function Puzzle() {
             <View style={s.input}>
               <Text style={s.clueHead}>{entry.num} {entry.dir === 'across' ? '가로' : '세로'} · {Array.from(entry.answer).length}글자</Text>
               <Text style={s.clue}>{entry.clue}</Text>
-              <Text style={s.pattern} accessibilityLabel={`채워진 글자 ${entryPattern(board, selected, letters)}`}>{entryPattern(board, selected, letters)}</Text>
+              <Text style={s.pattern} accessibilityLabel={`채워진 글자 ${pattern}`}>{pattern}</Text>
               {solvedHere ? <Text style={s.solved}>✓ 푼 낱말이에요</Text> : (
                 <>
                   <View style={s.inputRow}>
@@ -123,9 +132,14 @@ export default function Puzzle() {
                   </View>
                   <View style={s.inputFoot}>
                     <Text style={[s.feedback, { color: feedback?.ok ? C.good : C.bad }]}>
-                      {feedback ? (feedback.ok ? `정답! +${CROSSWORD_GRAINS}` : '다시 생각해 봐요') : ''}
+                      {feedback ? (feedback.ok ? `정답! +${feedback.grains}` : '다시 생각해 봐요') : ''}
                     </Text>
-                    <Pressable onPress={reveal} hitSlop={8} accessibilityRole="button"><Text style={s.help}>글자 보기</Text></Pressable>
+                    <View style={s.helps}>
+                      {chosungShown ? null : (
+                        <Pressable onPress={chosung} hitSlop={8} accessibilityRole="button" accessibilityHint="맞히면 낱알이 3개로 줄어요"><Text style={s.help}>초성 보기</Text></Pressable>
+                      )}
+                      <Pressable onPress={reveal} hitSlop={8} accessibilityRole="button"><Text style={s.help}>글자 보기</Text></Pressable>
+                    </View>
                   </View>
                 </>
               )}
@@ -168,6 +182,7 @@ const s = StyleSheet.create({
   num: { position: 'absolute', top: 1, left: 2, color: C.sub, fontWeight: '700' },
   letter: { color: C.ink, fontWeight: '800' },
   letterHelp: { color: C.accent },
+  hint: { color: C.faint, fontWeight: '700' },
   input: { ...paperCard, padding: 16, gap: 8 },
   clueHead: { fontSize: 12, color: C.accent, fontWeight: '800' },
   clue: { fontSize: 17, lineHeight: 25, color: C.ink, fontWeight: '600' },
@@ -179,6 +194,7 @@ const s = StyleSheet.create({
   submitText: { color: C.grainLight, fontSize: 16, fontWeight: '800' },
   inputFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   feedback: { fontSize: 14, fontWeight: '800' },
+  helps: { flexDirection: 'row', gap: 16 },
   help: { fontSize: 13, color: C.sub, textDecorationLine: 'underline' },
   doneCard: { ...paperCard, padding: 18, gap: 10, backgroundColor: C.goodSoft },
   doneTitle: { ...T.title, fontSize: 22, color: C.good },

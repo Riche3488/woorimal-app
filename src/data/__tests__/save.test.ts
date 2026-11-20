@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadSave, writeSave, finishRound, finishCard, saveCrossword, defaultSave, toggleStarSave, SAVE_KEY } from '../save';
+import { loadSave, writeSave, finishRound, finishCard, saveCrossword, addMadeCrossword, defaultSave, toggleStarSave, MADE_KEEP, SAVE_KEY } from '../save';
 import { startRound, answer } from '../../core/round';
 import type { AppQuestion } from '../../core/types';
 
@@ -133,4 +133,32 @@ test('saveCrossword: 판 진행을 남기고 낱알을 더하며, 낱알을 받�
 test('깨진 퍼즐 진행만 버리고 읽는다', async () => {
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify({ ...defaultSave(), crosswords: { a: { solved: [1], revealed: { '0,0': '가', x: 3 }, helps: 2 }, b: { solved: 'x' }, c: null } }));
   expect((await loadSave()).crosswords).toEqual({ a: { solved: [1], revealed: { '0,0': '가' }, helps: 2 } });
+});
+
+const made = (n: number) => ({
+  id: `made-${n}`, level: 'easy' as const, theme: `조합 퍼즐 ${n}`, rows: 4, cols: 4, intro: '', notes: [],
+  entries: [{ num: 1, dir: 'across' as const, row: 0, col: 0, answer: '가늘다', clue: '굵기가 작다' }],
+});
+
+test('addMadeCrossword: 만든 판을 앞에 두고, 너무 많으면 오래된 판과 그 진행을 지운다', () => {
+  let d = defaultSave();
+  for (let n = 1; n <= MADE_KEEP + 2; n++) d = addMadeCrossword(d, made(n));
+  d = saveCrossword(d, 'made-3', { solved: [0], revealed: {}, helps: 0 }, 0, new Date());
+  d = { ...d, crosswords: { ...d.crosswords, 'made-1': { solved: [], revealed: {}, helps: 0 } } };
+  d = addMadeCrossword(d, made(99));
+  expect(d.madeCrosswords.length).toBe(MADE_KEEP);
+  expect(d.madeCrosswords[0].id).toBe('made-99');
+  expect(d.madeCrosswords.some(b => b.id === 'made-3')).toBe(false);
+  expect(d.crosswords['made-3']).toBeUndefined();
+});
+
+test('만든 판·초성 기록을 읽고, 깨진 판은 버린다. 예전 저장에는 빈 목록', async () => {
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify({ ...defaultSave(), madeCrosswords: [made(1), { id: 'bad' }], crosswords: { 'made-1': { solved: [], revealed: {}, helps: 1, chosung: [0, 'x'] } } }));
+  const loaded = await loadSave();
+  expect(loaded.madeCrosswords.map(b => b.id)).toEqual(['made-1']);
+  expect(loaded.crosswords['made-1'].chosung).toEqual([0]);
+  const old: Record<string, unknown> = { ...defaultSave() };
+  delete old.madeCrosswords;
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(old));
+  expect((await loadSave()).madeCrosswords).toEqual([]);
 });

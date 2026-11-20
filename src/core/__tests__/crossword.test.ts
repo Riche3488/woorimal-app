@@ -1,5 +1,5 @@
 import {
-  boardLetters, buildGrid, CROSSWORD_GRAINS, entryCells, entryPattern, isComplete, revealLetter, solveEntry, emptyCrossword,
+  boardChosung, boardLetters, buildGrid, CROSSWORD_GRAINS, CROSSWORD_HINT_GRAINS, entryCells, entryPattern, isComplete, revealLetter, showChosung, solveEntry, emptyCrossword,
 } from '../crossword';
 import type { AppCrossword } from '../types';
 
@@ -55,4 +55,28 @@ test('isComplete: 모든 낱말을 풀면 끝', () => {
   expect(isComplete(board, p)).toBe(false);
   p = solveEntry(board, p, 2, '장화').progress;
   expect(isComplete(board, p)).toBe(true);
+});
+
+test('showChosung: 그 낱말의 빈칸에 초성을 보여 주고, 초성을 본 낱말은 맞혀도 낱알이 줄어든다', () => {
+  const p0 = solveEntry(board, emptyCrossword(), 1, '운동장').progress;
+  const p = showChosung(board, p0, 0);
+  expect(p.chosung).toEqual([0]);
+  expect(p.helps).toBe(1);
+  expect(showChosung(board, p, 0)).toBe(p); // 이미 본 낱말
+  expect(showChosung(board, p, 1)).toBe(p); // 이미 푼 낱말
+  const letters = boardLetters(board, p);
+  expect(entryPattern(board, 0, letters, p)).toBe('운ㄷㅎ');
+  expect(entryPattern(board, 2, letters, p)).toBe('장○');
+  expect(boardChosung(board, p)).toEqual({ '0,3': 'ㄷ', '0,4': 'ㅎ' });
+  const r = solveEntry(board, p, 0, '운동화');
+  expect(r.grains).toBe(CROSSWORD_HINT_GRAINS);
+  expect(CROSSWORD_HINT_GRAINS).toBeLessThan(CROSSWORD_GRAINS);
+  expect(boardChosung(board, r.progress)).toEqual({});
+});
+
+test('showChosung: 예전에 저장된 진행(chosung 없음)도 그대로 쓴다', () => {
+  const old = { solved: [], revealed: {}, helps: 0 };
+  expect(entryPattern(board, 0, {}, old)).toBe('○○○');
+  expect(solveEntry(board, old, 0, '운동화').grains).toBe(CROSSWORD_GRAINS);
+  expect(showChosung(board, old, 2).chosung).toEqual([2]);
 });

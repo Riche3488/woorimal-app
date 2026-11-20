@@ -10,7 +10,8 @@ import type { AppPack, AppQuestion, QuestionType } from '../core/types';
 import { loadPack, refreshPack } from '../data/pack-store';
 import { scheduleReminder } from '../data/reminder';
 import type { CrosswordProgress } from '../core/crossword';
-import { defaultSave, finishCard, finishRound, loadSave, saveCrossword, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
+import { makeCrossword, type MadeLevel } from '../core/crossword-make';
+import { addMadeCrossword, defaultSave, finishCard, finishRound, loadSave, saveCrossword, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 
 export type Game = {
   pack: AppPack;
@@ -29,6 +30,7 @@ export type Game = {
   complete(round: Round, mode?: RoundMode): void;
   answerCard(result: RoundResult): void; // 오늘의 낱말 확인 문제
   updateCrossword(id: string, progress: CrosswordProgress, grains: number): void; // 퍼즐 진행·낱알
+  makePuzzle(level: MadeLevel): string | null; // 문제를 엮어 조합 퍼즐 한 판을 만들고 그 id를 돌려준다(못 만들면 null)
   updateSettings(patch: Partial<Settings>): void;
   resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
 };
@@ -149,6 +151,21 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
     });
   }, []);
 
+  // 앞서 만든 판의 낱말은 되도록 피해서 새 낱말로 엮는다.
+  const makePuzzle = useCallback((level: MadeLevel) => {
+    if (!pack) return null;
+    const num = 1 + Math.max(0, ...save.madeCrosswords.map(b => Number(/^made-(\d+)$/.exec(b.id)?.[1] ?? 0)));
+    const avoid = new Set(save.madeCrosswords.flatMap(b => b.entries.map(e => e.answer)));
+    const board = makeCrossword(pack.questions, { level, id: `made-${num}`, num, rng: Math.random, avoid });
+    if (!board) return null;
+    setSave(prev => {
+      const next = addMadeCrossword(prev, board);
+      writeSave(next).catch(() => {});
+      return next;
+    });
+    return board.id;
+  }, [pack, save.madeCrosswords]);
+
   const counts = useMemo(() => (pack ? notebookCounts(save.progress, pack.questions, localDay(new Date())) : { review: 0, due: 0, starred: 0, mastered: 0 }), [pack, save.progress]);
 
   // 학습 알림: 기록·설정이 바뀔 때마다 다음 한 번을 다시 예약한다(끄면 지운다).
@@ -167,7 +184,7 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
 
   if (!ready || !pack) return <>{fallback}</>;
   return (
-    <GameContext.Provider value={{ pack, save, counts, lastRound, lastMode, previousSave, lastPracticeType, startNormal, startReview, startStarred, startPractice, toggleStar, startChallenge, complete, answerCard, updateCrossword, updateSettings, resetRecords }}>
+    <GameContext.Provider value={{ pack, save, counts, lastRound, lastMode, previousSave, lastPracticeType, startNormal, startReview, startStarred, startPractice, toggleStar, startChallenge, complete, answerCard, updateCrossword, makePuzzle, updateSettings, resetRecords }}>
       {children}
     </GameContext.Provider>
   );

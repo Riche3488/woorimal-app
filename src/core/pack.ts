@@ -28,7 +28,7 @@ const validCard = (c: any): c is AppCard => !!c && CARD_TEXT.every(f => isStr(c[
 
 // 퍼즐 판 검사: 판 안에 들어가고, 엇갈리는 칸의 글자가 서로 맞아야 한다.
 const LEVELS = new Set(['easy', 'normal', 'hard']);
-function validCrossword(b: any): b is AppCrossword {
+export function validCrossword(b: any): b is AppCrossword {
   const size = (v: unknown) => Number.isInteger(v) && (v as number) >= 4 && (v as number) <= 15;
   if (!b || !isStr(b.id) || !LEVELS.has(b.level) || !isStr(b.theme) || !size(b.rows) || !size(b.cols)) return false;
   if (!Array.isArray(b.entries) || !b.entries.length || !Array.isArray(b.notes) || !isStr(b.intro)) return false;
