@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ErrorScreen } from '../components/ErrorScreen';
 import { GameProvider } from '../state/GameProvider';
 import { C, FONT } from '../ui/theme';
 
@@ -11,6 +12,9 @@ const Loading = () => (
     <ActivityIndicator color={C.grain} />
   </View>
 );
+
+// 어느 화면에서든 예외가 나면 앱을 끄지 않고 ErrorScreen을 보인다.
+export { ErrorScreen as ErrorBoundary };
 
 export default function RootLayout() {
   // 글꼴을 못 읽어도(오류) 시스템 글꼴로 계속 연다.

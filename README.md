@@ -51,8 +51,10 @@ npx eas-cli build -p android --profile preview      # 설치용 APK
 npx eas-cli build -p android --profile production   # Play 스토어용 AAB
 ```
 
+`versionCode`는 EAS 서버가 관리한다(`appVersionSource: remote`, production 빌드마다 자동 증가). 사용자에게 보이는 버전은 `app.json`의 `version`을 올린다. 출시 점검과 할 일: [docs/2026-11-20-play-store-release.md](docs/2026-11-20-play-store-release.md)
+
 패키지 이름 `kr.co.woorimalcontest.app`. 아이콘·스플래시는 다람쥐 캐릭터(만든 방법: `docs/design/assets.md`).
 
 ## 테스트 모드 (답을 몰라도 기능 확인)
 
-설정 화면 맨 아래 "문제 N개 · 묶음 …" 줄을 7번 누르면 "테스트 모드" 스위치가 나타난다. 켜면 게임 화면에 정답과 **정답 제출 / 오답 제출 / 시간 초과로 넘기기** 버튼이 생기고, 설정에 **기록 초기화**(낱알·레벨·문제 기록 삭제, 설정 유지)가 생긴다. 일반 사용자는 스위치를 볼 수 없고 기본값은 꺼짐이다. 정답·오답 입력은 `src/core/testmode.ts`이며, 묶음의 모든 문제가 정답 입력으로 맞고 오답 입력으로 틀리는지 테스트가 검사한다.
+설정 화면 맨 아래 "문제 N개 · 묶음 …" 줄을 7번 누르면 "테스트 모드" 스위치가 나타난다. 켜면 게임 화면에 정답과 **정답 제출 / 오답 제출 / 시간 초과로 넘기기** 버튼이 생기고, 설정에 **기록 초기화**(낱알·레벨·문제 기록 삭제, 설정 유지)가 생긴다. 개발 실행(`__DEV__`)과 preview 빌드(`eas.json`의 `EXPO_PUBLIC_TEST_MODE=1`)에서만 열리고, Play용 production 빌드에서는 7번 눌러도 나타나지 않는다(`src/core/app-info.ts`). 기본값은 꺼짐이다. 정답·오답 입력은 `src/core/testmode.ts`이며, 묶음의 모든 문제가 정답 입력으로 맞고 오답 입력으로 틀리는지 테스트가 검사한다.

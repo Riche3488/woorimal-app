@@ -8,6 +8,7 @@ import { localDay } from '../core/growth';
 import type { Round } from '../core/round';
 import { reportUrl } from '../core/report';
 import type { AppQuestion, QuestionType } from '../core/types';
+import { APP_VERSION, TEST_MODE_OK } from '../data/build';
 import type { RoundMode } from '../data/save';
 import { useGame } from '../state/GameProvider';
 import { Image } from 'expo-image';
@@ -39,13 +40,13 @@ export default function Play() {
 
   // 웹 제보 화면을 브라우저로 연다(앱은 서버에 쓰지 않는다). 판은 그대로 이어서 풀 수 있다.
   const report = (q: AppQuestion) => {
-    Linking.openURL(reportUrl(q, game.pack.version)).catch(() => Alert.alert('신고 화면을 열 수 없어요', '인터넷 연결을 확인해 주세요.'));
+    Linking.openURL(reportUrl(q, game.pack.version, APP_VERSION)).catch(() => Alert.alert('신고 화면을 열 수 없어요', '인터넷 연결을 확인해 주세요.'));
   };
 
   return (
     <SafeAreaView style={s.screen}>
       {questions.length ? (
-        <PlayScreen questions={questions} onFinish={finish} haptics={game.save.settings.haptics} testMode={game.save.settings.testMode}
+        <PlayScreen questions={questions} onFinish={finish} haptics={game.save.settings.haptics} testMode={TEST_MODE_OK && game.save.settings.testMode}
           hearts={challenge ? CHALLENGE_SIZE : undefined} showHearts={!challenge}
           starred={key => !!game.save.progress.stats[key]?.starred} onToggleStar={game.toggleStar} onReport={report} />
       ) : (

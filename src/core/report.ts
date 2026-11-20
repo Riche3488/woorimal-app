@@ -5,8 +5,8 @@ import type { AppQuestion } from './types';
 
 export const REPORT_TARGET_MAX = 200;
 
-export function reportUrl(q: AppQuestion, packVersion: string): string {
-  const target = ['[앱]', `${q.key} · 정답 ${q.answer} · 묶음 ${packVersion} · ${q.prompt}`].join(' ')
+export function reportUrl(q: AppQuestion, packVersion: string, appVersion: string): string {
+  const target = ['[앱]', `${q.key} · 정답 ${q.answer} · 묶음 ${packVersion} · 앱 ${appVersion} · ${q.prompt}`].join(' ')
     .replace(/\s*\n\s*/g, ' ')
     .slice(0, REPORT_TARGET_MAX);
   const params = new URLSearchParams({ kind: 'data', target });

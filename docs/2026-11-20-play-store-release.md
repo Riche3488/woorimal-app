@@ -1,6 +1,6 @@
 # Google Play 출시 점검과 할 일
 
-작성일: 2026-11-20 · 상태: 점검 끝, 할 일 진행 전
+작성일: 2026-11-20 · 상태: 1단계(코드·저장소) 끝, 2단계부터 진행 전. 웹 개인정보처리방침은 커밋했으나 아직 배포 전
 
 앱을 Google Play에 처음 올리기 전에 저장소 안에서 확인할 수 있는 것을 점검했고, 남은 일을 순서대로 적었다. Play 정책 수치(테스터 수, 대상 API 등)는 자주 바뀌므로 진행할 때 Play Console 안내로 다시 확인한다.
 
@@ -41,14 +41,16 @@
 
 ### 1단계: 코드·저장소 (이 저장소와 웹 저장소)
 
-- [ ] F1 앱 전용 개인정보처리방침 페이지를 웹에 만들어 배포하고, 앱 설정에 링크(`Linking.openURL`)를 추가
-- [ ] F3 설정에 앱 버전 표시, 신고 URL에 앱 버전 추가 (`src/core/report.ts` 테스트 먼저)
-- [ ] F4 루트 `ErrorBoundary` 추가
-- [ ] F2 쓰지 않는 의존성 정리 후 `expo-doctor`·테스트
-- [ ] F5 `eas.json` 버전 자동 증가 설정
-- [ ] F6 테스트 모드 노출 범위 결정·반영
-- [ ] F7·F8 저작권 확인 결과를 문서에 기록
-- [ ] F9 패키지 이름 확정
+- [x] F1 앱 전용 개인정보처리방침: 웹 `public/app/privacy.html`(웹 커밋 3975b7c), 앱 설정에 "개인정보처리방침" 줄(`src/core/app-info.ts`의 `PRIVACY_URL`)
+  - [ ] **웹 배포**(`firebase.cmd deploy --only hosting`) 뒤 https://woorimal-contest.co.kr/app/privacy.html 이 열리는지 확인
+- [x] F3 설정 정보 줄에 `앱 1.0.0`, 신고 대상 글에 `앱 1.0.0` 추가(`src/data/build.ts`의 `APP_VERSION`, expo-constants)
+- [x] F4 루트 `ErrorBoundary`(`src/components/ErrorScreen.tsx`: 다시 시도·처음으로)
+- [x] F2 `expo-glass-effect`·`expo-symbols`·`@expo/ui`·`expo-web-browser`·`expo-device` 제거(expo-router의 선택 의존성이라 빼도 됨). `expo-constants`(expo-router 필수)·`expo-system-ui`·`react-native-web`은 남김. `expo-doctor` 20/20, `expo export --platform android` 성공
+- [x] F5 `eas.json`: `appVersionSource: remote`, production `autoIncrement: true`. 첫 production 빌드 때 EAS가 시작 번호를 물으면 1로 둔다(또는 `npx eas-cli build:version:set`)
+- [x] F6 테스트 모드는 개발 실행과 preview 빌드(`EXPO_PUBLIC_TEST_MODE=1`)에서만 열림. production에서는 저장된 값이 켜져 있어도 무시
+- [x] F7 Higgsfield 약관(2026-10-23 갱신) 4.4항: 생성물 상업 이용 제한 없음, 요금제 예외 없음 → `docs/design/assets.md`에 기록. 남은 일: 9~10항(구독·크레딧) 원문 확인, 한국 법이 AI 생성물 표시를 요구하는지 확인(필요하면 설정 출처 줄에 "그림: AI 생성" 추가)
+- [x] F8 `blog` 띄어쓰기 322문제는 운영자가 직접 쓴 문장(2026-11-20 확인). 그대로 둔다
+- [x] F9 패키지 이름 `kr.co.woorimalcontest.app`으로 확정(2026-11-20)
 - [ ] (선택) 웹 `terms.html`처럼 앱 이용약관이 필요한지 판단. 계정·결제가 없으므로 1차에는 없어도 된다
 
 ### 2단계: 빌드와 실기기 확인

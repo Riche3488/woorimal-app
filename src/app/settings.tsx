@@ -1,14 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PRIVACY_URL } from '../core/app-info';
 import { creditLines } from '../core/labels';
 import { REMINDER_HOURS } from '../core/reminder';
+import { APP_VERSION, TEST_MODE_OK } from '../data/build';
 import { requestReminderPermission } from '../data/reminder';
 import { useGame } from '../state/GameProvider';
 import { C, paperCard, T } from '../ui/theme';
 
-// 묶음 정보 줄을 이만큼 연달아 누르면 테스트 모드 스위치가 나타난다.
+// 묶음 정보 줄을 이만큼 연달아 누르면 테스트 모드 스위치가 나타난다(개발·preview 빌드만, src/data/build.ts).
 const UNLOCK_TAPS = 7;
 
 const hourLabel = (h: number) => (h < 12 ? `오전 ${h}시` : `오후 ${h === 12 ? 12 : h - 12}시`);
@@ -16,7 +18,7 @@ const hourLabel = (h: number) => (h < 12 ? `오전 ${h}시` : `오후 ${h === 12
 export default function Settings() {
   const { pack, save, updateSettings, resetRecords } = useGame();
   const [taps, setTaps] = useState(0);
-  const showTest = save.settings.testMode || taps >= UNLOCK_TAPS;
+  const showTest = TEST_MODE_OK && (save.settings.testMode || taps >= UNLOCK_TAPS);
 
   // 켤 때 알림 권한을 묻는다. 거절하면 켜지 않는다.
   const toggleReminder = async (on: boolean) => {
@@ -27,7 +29,9 @@ export default function Settings() {
     updateSettings({ reminder: on });
   };
 
-  const confirmReset =() => Alert.alert('기록 초기화', '낱알·레벨·문제 기록을 모두 지웁니다.', [
+  const openPrivacy = () => Linking.openURL(PRIVACY_URL).catch(() => Alert.alert('개인정보처리방침을 열 수 없어요', '인터넷 연결을 확인해 주세요.'));
+
+  const confirmReset = () => Alert.alert('기록 초기화', '낱알·레벨·문제 기록을 모두 지웁니다.', [
     { text: '취소', style: 'cancel' },
     { text: '초기화', style: 'destructive', onPress: resetRecords },
   ]);
@@ -91,8 +95,12 @@ export default function Settings() {
             ) : null}
           </>
         ) : null}
+        <Pressable style={s.row} onPress={openPrivacy} accessibilityRole="link">
+          <Text style={s.label}>개인정보처리방침</Text>
+          <Text style={s.chevron}>›</Text>
+        </Pressable>
         <Pressable style={s.info} onPress={() => setTaps(t => t + 1)}>
-          <Text style={s.infoText}>문제 {pack.questions.length.toLocaleString()}개 · 묶음 {pack.version}</Text>
+          <Text style={s.infoText}>앱 {APP_VERSION} · 문제 {pack.questions.length.toLocaleString()}개 · 묶음 {pack.version}</Text>
           {creditLines(pack.questions).map(line => <Text key={line} style={s.infoText}>{line}</Text>)}
         </Pressable>
       </ScrollView>
@@ -108,6 +116,7 @@ const s = StyleSheet.create({
   content: { padding: 20, gap: 12 },
   row: { ...paperCard, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: 16 },
   label: { fontSize: 16, color: C.ink, fontWeight: '600' },
+  chevron: { fontSize: 20, color: C.faint },
   desc: { fontSize: 12, color: C.sub, marginTop: 2 },
   inline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   hours: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
