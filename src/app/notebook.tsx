@@ -59,7 +59,7 @@ export default function Notebook() {
         {tabs.map(([key, label]) => (
           <Pressable key={key} onPress={() => { setTab(key); setOpen(null); }} style={[s.tab, tab === key && s.tabOn]}
             accessibilityRole="tab" accessibilityState={{ selected: tab === key }}>
-            <Text style={[s.tabText, tab === key && s.tabTextOn]}>{label}</Text>
+            <Text style={[s.tabText, tab === key && s.tabTextOn]} maxFontSizeMultiplier={1.4}>{label}</Text>
           </Pressable>
         ))}
       </View>
@@ -114,7 +114,7 @@ function Row({ q, stat, today, open, onPress, onStar }: {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  back: { fontSize: 16, color: C.sub, fontWeight: '700', width: 48 },
+  back: { fontSize: 16, color: C.sub, fontWeight: '700', minWidth: 48 },
   title: { ...T.title, fontSize: 20 },
   tabs: { flexDirection: 'row', gap: 6, paddingHorizontal: 16 },
   tab: { flex: 1, paddingVertical: 10, borderRadius: R.pill, alignItems: 'center', backgroundColor: C.paper, borderWidth: 1, borderColor: C.line },

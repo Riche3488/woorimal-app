@@ -91,7 +91,7 @@ export default function CardScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  back: { fontSize: 16, color: C.sub, fontWeight: '700', width: 48 },
+  back: { fontSize: 16, color: C.sub, fontWeight: '700', minWidth: 48 },
   title: { ...T.title, fontSize: 20 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: C.sub, fontSize: 15 },

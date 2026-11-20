@@ -19,8 +19,12 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "kr.co.woorimalcontest.app",
-      "versionCode": 1,
-      "permissions": ["android.permission.POST_NOTIFICATIONS"]
+      "permissions": ["android.permission.POST_NOTIFICATIONS"],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "com.google.android.c2dm.permission.RECEIVE",
+        "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

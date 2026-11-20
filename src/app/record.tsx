@@ -77,7 +77,7 @@ function Item({ label, value }: { label: string; value: string }) {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  back: { fontSize: 16, color: C.sub, fontWeight: '700', width: 48 },
+  back: { fontSize: 16, color: C.sub, fontWeight: '700', minWidth: 48 },
   title: { ...T.title, fontSize: 20 },
   content: { padding: 20, gap: 12 },
   summary: { flexDirection: 'row', gap: 8 },

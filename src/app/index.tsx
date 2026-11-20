@@ -78,7 +78,7 @@ export default function Home() {
         <View style={s.actions}>
           <Animated.View entering={enterUp(2)}>
             <PressableScale onPress={openChallenge} haptic={haptic} style={s.challenge} accessibilityRole="button">
-              <View style={s.seal}><Text style={s.sealText}>오늘</Text></View>
+              <View style={s.seal}><Text style={s.sealText} maxFontSizeMultiplier={1.2}>오늘</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.challengeTitle}>오늘의 문제 #{challengeNumber(today)}</Text>
                 <Text style={s.challengeSub}>
@@ -94,9 +94,9 @@ export default function Home() {
             <Animated.View entering={enterUp(2)}>
               <Pressable onPress={() => router.push('/card')} style={s.wordRow} accessibilityRole="button"
                 accessibilityLabel={`오늘의 낱말 ${card.word}${cardDone ? ', 풀었어요' : ''}`}>
-                <Text style={s.wordLabel}>오늘의 낱말</Text>
+                <Text style={s.wordLabel} maxFontSizeMultiplier={1.4}>오늘의 낱말</Text>
                 <Text style={s.wordText} numberOfLines={1}>{card.word}</Text>
-                <Text style={[s.wordState, cardDone && { color: C.good }]}>{cardDone ? '✓ 풀었어요' : '읽고 풀기 ›'}</Text>
+                <Text style={[s.wordState, cardDone && { color: C.good }]} maxFontSizeMultiplier={1.4}>{cardDone ? '✓ 풀었어요' : '읽고 풀기 ›'}</Text>
               </Pressable>
             </Animated.View>
           ) : null}
@@ -155,7 +155,8 @@ const s = StyleSheet.create({
   badgeLv: { ...T.num, fontSize: 18, color: C.accent },
   badgeBarn: { fontSize: 12, color: C.sub, fontWeight: '700' },
   status: { paddingTop: 16, paddingBottom: 6, gap: 8 },
-  levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  // 큰 글꼴에서는 '다음 레벨까지'가 다음 줄로 내려간다.
+  levelRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, justifyContent: 'space-between', alignItems: 'baseline' },
   level: { ...T.title, fontSize: 21 },
   xpText: { fontSize: 13, color: C.sub, fontWeight: '600' },
   xpTrack: { height: 12, borderRadius: 6, backgroundColor: C.line, overflow: 'hidden' },
