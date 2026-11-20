@@ -46,3 +46,6 @@ example
 
 # 생성 자산 원본(PNG). 앱에는 assets/art/*.webp만 넣는다
 assets/art/src/
+
+# 로컬 MCP 서버 설정(접속 정보가 들어갈 수 있음)
+.mcp.json
