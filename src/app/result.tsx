@@ -13,6 +13,7 @@ import { sourceNote, TYPE_LABELS } from '../core/labels';
 import { newlyMastered } from '../core/progress';
 import { useGame } from '../state/GameProvider';
 import { DUR, EASE, enterUp } from '../ui/motion';
+import { goHome } from '../ui/navigation';
 import { C, elevation, paperCard, R, T } from '../ui/theme';
 
 export default function Result() {
@@ -33,7 +34,7 @@ export default function Result() {
   const barStyle = useAnimatedStyle(() => ({ width: `${Math.max(0.02, bar.value) * 100}%` }));
 
   if (!lastRound) {
-    return <SafeAreaView style={s.screen}><Pressable onPress={() => router.replace('/')}><Text style={s.link}>홈으로</Text></Pressable></SafeAreaView>;
+    return <SafeAreaView style={s.screen}><Pressable onPress={goHome}><Text style={s.link}>홈으로</Text></Pressable></SafeAreaView>;
   }
 
   const total = lastRound.results.length;
@@ -139,7 +140,7 @@ export default function Result() {
           haptic={save.settings.haptics} style={s.primary} accessibilityRole="button">
           <Text style={s.primaryText}>다음 판</Text>
         </PressableScale>
-        <PressableScale onPress={() => router.replace('/')} style={s.secondary} accessibilityRole="button">
+        <PressableScale onPress={goHome} style={s.secondary} accessibilityRole="button">
           <Text style={s.secondaryText}>홈</Text>
         </PressableScale>
       </View>
