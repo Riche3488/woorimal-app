@@ -8,7 +8,11 @@ import { sourceNote, TYPE_LABELS } from '../core/labels';
 import { notebook, type NotebookFilter, type QuestionStat } from '../core/progress';
 import type { AppQuestion } from '../core/types';
 import { useGame } from '../state/GameProvider';
-import { C, R } from '../ui/theme';
+import { Image } from 'expo-image';
+import Animated from 'react-native-reanimated';
+import { ART } from '../../assets/art';
+import { enterUp } from '../ui/motion';
+import { C, paperCard, R, T } from '../ui/theme';
 
 const EMPTY: Record<NotebookFilter, string> = {
   review: '틀린 문제가 여기에 모여요',
@@ -66,7 +70,12 @@ export default function Notebook() {
         </Pressable>
       )}
       <ScrollView contentContainerStyle={s.list}>
-        {list.length === 0 && <Text style={s.empty}>{EMPTY[tab]}</Text>}
+        {list.length === 0 && (
+          <Animated.View entering={enterUp(0)} style={s.emptyBox}>
+            <Image source={ART.squirrel.think} style={s.emptyArt} contentFit="contain" accessible={false} />
+            <Text style={s.empty}>{EMPTY[tab]}</Text>
+          </Animated.View>
+        )}
         {list.map(q => (
           <Row key={q.key} q={q} stat={save.progress.stats[q.key]} today={today} open={open === q.key}
             onPress={() => setOpen(open === q.key ? null : q.key)} onStar={() => toggleStar(q.key)} />
@@ -86,7 +95,7 @@ function Row({ q, stat, today, open, onPress, onStar }: {
         <Text style={s.rowType}>{TYPE_LABELS[q.type] ?? q.type}</Text>
         <Text style={s.rowDue}>{dueText(stat, today)}</Text>
         <Pressable onPress={onStar} hitSlop={10} style={s.star} accessibilityRole="button" accessibilityLabel={stat.starred ? '담기 취소' : '담기'}>
-          <Text style={s.starText}>{stat.starred ? '⭐' : '☆'}</Text>
+          <Text style={s.starText}>{stat.starred ? '★' : '☆'}</Text>
         </Pressable>
       </View>
       <Text style={s.prompt} numberOfLines={open ? undefined : 2}>{q.prompt}</Text>
@@ -105,25 +114,27 @@ function Row({ q, stat, today, open, onPress, onStar }: {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  back: { fontSize: 16, color: C.sub, fontWeight: '600', width: 48 },
-  title: { fontSize: 18, fontWeight: '800', color: C.ink },
+  back: { fontSize: 16, color: C.sub, fontWeight: '700', width: 48 },
+  title: { ...T.title, fontSize: 20 },
   tabs: { flexDirection: 'row', gap: 6, paddingHorizontal: 16 },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: R.button, alignItems: 'center', backgroundColor: C.card, borderWidth: 1, borderColor: C.line },
+  tab: { flex: 1, paddingVertical: 10, borderRadius: R.pill, alignItems: 'center', backgroundColor: C.paper, borderWidth: 1, borderColor: C.line },
   tabOn: { backgroundColor: C.ink, borderColor: C.ink },
   tabText: { fontSize: 13, fontWeight: '700', color: C.sub },
-  tabTextOn: { color: '#fff' },
-  play: { marginHorizontal: 16, marginTop: 12, backgroundColor: C.grainSoft, borderRadius: R.card, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.grain },
+  tabTextOn: { color: C.grainLight },
+  play: { marginHorizontal: 16, marginTop: 12, backgroundColor: '#FFF8E8', borderRadius: R.card, paddingVertical: 15, alignItems: 'center', borderWidth: 1.5, borderColor: C.grain, borderBottomWidth: 3 },
   playText: { fontSize: 16, fontWeight: '800', color: C.ink },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.7 },
   list: { padding: 16, gap: 10 },
-  empty: { color: C.sub, fontSize: 14, textAlign: 'center', marginTop: 24 },
-  row: { backgroundColor: C.card, borderRadius: R.card, padding: 14, gap: 6, borderWidth: 1, borderColor: C.line },
+  emptyBox: { alignItems: 'center', marginTop: 28, gap: 6 },
+  emptyArt: { width: 150, height: 150 },
+  empty: { color: C.sub, fontSize: 15, textAlign: 'center', fontWeight: '600' },
+  row: { ...paperCard, padding: 14, gap: 6 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowType: { fontSize: 13, color: C.accent, fontWeight: '700' },
   rowDue: { fontSize: 12, color: C.sub, fontWeight: '600' },
   star: { marginLeft: 'auto' },
-  starText: { fontSize: 20, color: C.grain },
+  starText: { fontSize: 22, color: C.grain },
   prompt: { fontSize: 15, color: C.ink, fontWeight: '600', lineHeight: 22 },
   detail: { gap: 4, marginTop: 4 },
   answer: { fontSize: 15, color: C.good, fontWeight: '700' },

@@ -4,7 +4,7 @@ import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { creditLines } from '../core/labels';
 import { useGame } from '../state/GameProvider';
-import { C, R } from '../ui/theme';
+import { C, paperCard, T } from '../ui/theme';
 
 // 묶음 정보 줄을 이만큼 연달아 누르면 테스트 모드 스위치가 나타난다.
 const UNLOCK_TAPS = 7;
@@ -61,10 +61,10 @@ export default function Settings() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  back: { fontSize: 16, color: C.sub, fontWeight: '600', width: 48 },
-  title: { fontSize: 18, fontWeight: '800', color: C.ink },
+  back: { fontSize: 16, color: C.sub, fontWeight: '700', width: 48 },
+  title: { ...T.title, fontSize: 20 },
   content: { padding: 20, gap: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, backgroundColor: C.card, borderRadius: R.card, padding: 16, borderWidth: 1, borderColor: C.line },
+  row: { ...paperCard, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: 16 },
   label: { fontSize: 16, color: C.ink, fontWeight: '600' },
   desc: { fontSize: 12, color: C.sub, marginTop: 2 },
   info: { marginTop: 12, gap: 4 },

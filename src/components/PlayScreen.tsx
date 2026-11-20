@@ -2,14 +2,17 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { TYPE_LABELS } from '../core/labels';
 import { answer, beginQuestion, canSubmit, giveUp, isOver, remainingMs, startRound, timeout, type Round } from '../core/round';
 import { correctInput, wrongInput } from '../core/testmode';
 import { timeLimitMs } from '../core/timing';
 import type { AnswerInput, AppQuestion } from '../core/types';
-import { C, R } from '../ui/theme';
+import { enterUp } from '../ui/motion';
+import { C, paperCard, R, T } from '../ui/theme';
 import { ChoiceAnswer, SpacingAnswer, TypedAnswer } from './answers';
-import { Hearts, SourceNote, TimerBar } from './bits';
+import { GrainBurst, Pop, Shake } from './art';
+import { GrainIcon, Hearts, SourceNote, TimerBar } from './bits';
 
 export const FEEDBACK_MS = 1200;
 
@@ -91,7 +94,9 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
       <View style={s.top}>
         {showHearts ? <Hearts hearts={round.hearts} /> : <Text style={s.progress}>오늘의 문제</Text>}
         <Text style={s.progress}>{Math.min(round.index + (phase === 'question' ? 1 : 0), round.questions.length)} / {round.questions.length}</Text>
-        <Text style={s.grains}>🌾 {round.grains}</Text>
+        <Pop trigger={round.grains} style={s.grainBox}>
+          <GrainIcon size={20} /><Text style={s.grains}>{round.grains}</Text>
+        </Pop>
       </View>
       <TimerBar ratio={ratio} />
 
@@ -100,10 +105,10 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
           <Text style={s.type}>{shown.label ? `${TYPE_LABELS[shown.type]} · ${shown.label}` : TYPE_LABELS[shown.type]}</Text>
           {round.streak >= 3 && phase === 'question' ? <Text style={s.streak}>🔥 {round.streak}연속</Text> : null}
         </View>
-        <View style={s.card}>
+        <Animated.View key={`card-${shown.key}`} entering={enterUp(0)} style={s.card}>
           <Text style={s.prompt}>{shown.prompt}</Text>
           <SourceNote source={shown.source} />
-        </View>
+        </Animated.View>
 
         {testMode && phase === 'question' && question ? (
           <View style={s.test}>
@@ -126,16 +131,18 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
             </Pressable>
           </View>
         ) : last ? (
+          <Shake trigger={last.correct ? 0 : round.results.length}>
           <Pressable onPress={() => next(round)} style={[s.feedback, last.correct ? s.good : s.bad]} accessibilityRole="button">
+            <GrainBurst trigger={last.correct ? round.results.length : 0} />
             <View style={s.verdictRow}>
               <Text style={[s.verdict, { color: last.correct ? C.good : C.bad }]}>
                 {last.correct ? '정답!' : last.timedOut ? '시간 초과' : last.gaveUp ? '모르겠어요' : '아쉬워요'}
               </Text>
-              {last.correct && last.grains ? <Text style={s.gain}>+{last.grains} 🌾</Text> : null}
+              {last.correct && last.grains ? <View style={s.gainBox}><Text style={s.gain}>+{last.grains}</Text><GrainIcon size={18} /></View> : null}
               {onToggleStar ? (
                 <Pressable onPress={() => onToggleStar(shown.key)} hitSlop={12} style={s.star} accessibilityRole="button"
                   accessibilityLabel={starred?.(shown.key) ? '담기 취소' : '담기'}>
-                  <Text style={s.starText}>{starred?.(shown.key) ? '⭐' : '☆'}</Text>
+                  <Text style={s.starText}>{starred?.(shown.key) ? '★' : '☆'}</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -144,6 +151,7 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
             {shown.explain ? <Text style={s.explain} numberOfLines={last.correct ? 4 : undefined}>{shown.explain}</Text> : null}
             <Text style={last.correct ? s.tapHint : s.nextHint}>{last.correct ? '눌러서 바로 다음 문제' : '눌러서 다음 문제'}</Text>
           </Pressable>
+          </Shake>
         ) : null}
       </ScrollView>
     </View>
@@ -152,30 +160,32 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg, paddingHorizontal: 18, paddingTop: 12 },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  progress: { fontSize: 15, color: C.sub, fontWeight: '600' },
-  grains: { fontSize: 15, color: C.ink, fontWeight: '700' },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  progress: { ...T.num, fontSize: 17, color: C.sub },
+  grainBox: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: R.pill, backgroundColor: C.paper, borderWidth: 1, borderColor: C.line },
+  grains: { ...T.num, fontSize: 17, color: C.grainDeep },
   body: { flex: 1 },
   bodyContent: { paddingVertical: 18, gap: 16 },
   typeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  type: { flexShrink: 1, fontSize: 14, color: C.accent, fontWeight: '700' },
-  streak: { fontSize: 14, color: C.accent, fontWeight: '800' },
-  card: { backgroundColor: C.card, borderRadius: R.card, padding: 20, borderWidth: 1, borderColor: C.line },
-  prompt: { fontSize: 20, lineHeight: 30, color: C.ink, fontWeight: '600' },
-  feedback: { borderRadius: R.card, padding: 18, gap: 6 },
-  good: { backgroundColor: C.goodSoft },
-  bad: { backgroundColor: C.badSoft },
-  verdictRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
-  verdict: { fontSize: 22, fontWeight: '800' },
-  gain: { fontSize: 17, fontWeight: '700', color: C.grain },
+  type: { flexShrink: 1, fontSize: 13, color: C.accent, fontWeight: '800', letterSpacing: 0.3 },
+  streak: { fontSize: 13, color: C.accent, fontWeight: '800', paddingVertical: 3, paddingHorizontal: 9, borderRadius: R.pill, backgroundColor: '#FCEFE7', overflow: 'hidden' },
+  card: { ...paperCard, padding: 22 },
+  prompt: { fontSize: 20, lineHeight: 31, color: C.ink, fontWeight: '600' },
+  feedback: { borderRadius: R.card, padding: 18, gap: 6, borderWidth: 1 },
+  good: { backgroundColor: C.goodSoft, borderColor: '#BFDDC6' },
+  bad: { backgroundColor: C.badSoft, borderColor: '#EDC1BA' },
+  verdictRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  verdict: { ...T.title, fontSize: 24, lineHeight: 32 },
+  gainBox: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  gain: { ...T.num, fontSize: 19, color: C.grainDeep },
   dontKnow: { alignSelf: 'center', marginTop: 14, paddingVertical: 6, paddingHorizontal: 12 },
   dontKnowText: { fontSize: 14, color: C.faint, fontWeight: '600', textDecorationLine: 'underline' },
   star: { marginLeft: 'auto', paddingHorizontal: 4 },
-  starText: { fontSize: 24, color: C.grain },
-  answerLine: { fontSize: 18, color: C.ink, fontWeight: '700' },
+  starText: { fontSize: 26, color: C.grain },
+  answerLine: { fontSize: 18, color: C.ink, fontWeight: '800' },
   explain: { fontSize: 14, lineHeight: 21, color: C.sub },
   tapHint: { fontSize: 12, color: C.faint, marginTop: 4 },
-  nextHint: { fontSize: 15, color: C.ink, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+  nextHint: { fontSize: 15, color: C.ink, fontWeight: '800', marginTop: 8, textAlign: 'center' },
   test: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.accent, borderRadius: R.card, padding: 12, gap: 8 },
   testText: { fontSize: 14, color: C.accent, fontWeight: '700' },
   testRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

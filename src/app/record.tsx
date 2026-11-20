@@ -7,7 +7,11 @@ import { TYPE_LABELS } from '../core/labels';
 import { typeAccuracy } from '../core/progress';
 import type { QuestionType } from '../core/types';
 import { useGame } from '../state/GameProvider';
-import { C, R } from '../ui/theme';
+import { Image } from 'expo-image';
+import Animated from 'react-native-reanimated';
+import { ART } from '../../assets/art';
+import { enterUp } from '../ui/motion';
+import { C, paperCard, R, T } from '../ui/theme';
 
 export default function Record() {
   const { pack, save } = useGame();
@@ -30,9 +34,15 @@ export default function Record() {
         </View>
 
         <Text style={s.section}>유형별 정답률 (약한 유형부터 · 누르면 연습)</Text>
-        {rows.length === 0 && <Text style={s.empty}>아직 기록이 없어요. 한 판 풀어 보세요.</Text>}
-        {rows.map(r => (
-          <Pressable key={r.type} onPress={() => router.push({ pathname: '/play', params: { mode: 'practice', type: r.type } })}
+        {rows.length === 0 && (
+          <View style={s.emptyBox}>
+            <Image source={ART.squirrel.think} style={s.emptyArt} contentFit="contain" accessible={false} />
+            <Text style={s.empty}>아직 기록이 없어요. 한 판 풀어 보세요.</Text>
+          </View>
+        )}
+        {rows.map((r, i) => (
+          <Animated.View key={r.type} entering={enterUp(Math.min(i, 6))}>
+          <Pressable onPress={() => router.push({ pathname: '/play', params: { mode: 'practice', type: r.type } })}
             style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]} accessibilityRole="button">
             <View style={s.rowTop}>
               <Text style={s.rowLabel}>{TYPE_LABELS[r.type as QuestionType] ?? r.type}</Text>
@@ -40,6 +50,7 @@ export default function Record() {
             </View>
             <View style={s.track}><View style={[s.fill, { width: `${r.rate * 100}%`, backgroundColor: r.rate < 0.5 ? C.bad : r.rate < 0.8 ? C.grain : C.good }]} /></View>
           </Pressable>
+          </Animated.View>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -58,21 +69,23 @@ function Item({ label, value }: { label: string; value: string }) {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  back: { fontSize: 16, color: C.sub, fontWeight: '600', width: 48 },
-  title: { fontSize: 18, fontWeight: '800', color: C.ink },
+  back: { fontSize: 16, color: C.sub, fontWeight: '700', width: 48 },
+  title: { ...T.title, fontSize: 20 },
   content: { padding: 20, gap: 12 },
   summary: { flexDirection: 'row', gap: 8 },
-  item: { flex: 1, backgroundColor: C.card, borderRadius: R.card, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: C.line },
-  itemValue: { fontSize: 18, fontWeight: '800', color: C.ink },
+  item: { ...paperCard, flex: 1, paddingVertical: 14, alignItems: 'center' },
+  itemValue: { ...T.num, fontSize: 20, lineHeight: 28 },
   itemLabel: { fontSize: 12, color: C.sub, marginTop: 2 },
   section: { fontSize: 14, fontWeight: '700', color: C.sub, marginTop: 12 },
-  empty: { color: C.sub, fontSize: 14 },
-  row: { backgroundColor: C.card, borderRadius: R.card, padding: 14, gap: 8, borderWidth: 1, borderColor: C.line },
+  emptyBox: { alignItems: 'center', marginTop: 12, gap: 6 },
+  emptyArt: { width: 140, height: 140 },
+  empty: { color: C.sub, fontSize: 15, fontWeight: '600' },
+  row: { ...paperCard, padding: 14, gap: 8 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between' },
   rowLabel: { fontSize: 15, fontWeight: '700', color: C.ink },
   rowValue: { fontSize: 15, fontWeight: '700', color: C.ink },
   practice: { fontSize: 13, color: C.accent, fontWeight: '700' },
   rowSub: { fontSize: 12, color: C.sub, fontWeight: '400' },
   track: { height: 8, borderRadius: 4, backgroundColor: C.line, overflow: 'hidden' },
-  fill: { height: '100%' },
+  fill: { height: '100%', borderRadius: 4 },
 });

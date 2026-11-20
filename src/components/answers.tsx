@@ -1,7 +1,7 @@
 // 문제 방식별 답 입력: 보기 고르기, 직접 입력, 띄울 자리 누르기.
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { C, R } from '../ui/theme';
+import { C, elevation, R, T } from '../ui/theme';
 
 export function ChoiceAnswer({ choices, onPick, disabled }: { choices: string[]; onPick(c: string): void; disabled: boolean }) {
   return (
@@ -97,16 +97,16 @@ function Gap({ index, on, disabled, onPress }: { index: number; on: boolean; dis
 
 const s = StyleSheet.create({
   choices: { gap: 10 },
-  choice: { backgroundColor: C.card, borderWidth: 1.5, borderColor: C.line, borderRadius: R.button, paddingVertical: 16, paddingHorizontal: 16 },
-  choiceText: { fontSize: 17, color: C.ink },
-  pressed: { opacity: 0.6, transform: [{ scale: 0.98 }] },
-  chosung: { fontSize: 30, letterSpacing: 6, fontWeight: '700', color: C.accent, textAlign: 'center', marginBottom: 14 },
+  choice: { backgroundColor: C.paper, borderWidth: 1.5, borderColor: C.line, borderBottomWidth: 3, borderBottomColor: '#E0D2B9', borderRadius: R.button, paddingVertical: 16, paddingHorizontal: 18, ...elevation(1) },
+  choiceText: { fontSize: 17, color: C.ink, fontWeight: '600' },
+  pressed: { transform: [{ translateY: 2 }], borderBottomWidth: 1.5, backgroundColor: C.grainSoft },
+  chosung: { ...T.num, fontSize: 34, lineHeight: 44, letterSpacing: 10, color: C.accent, textAlign: 'center', marginBottom: 14 },
   inputRow: { flexDirection: 'row', gap: 8 },
-  input: { flex: 1, backgroundColor: C.card, borderWidth: 1.5, borderColor: C.line, borderRadius: R.button, paddingHorizontal: 14, fontSize: 20, color: C.ink, minHeight: 54 },
-  submit: { backgroundColor: C.ink, borderRadius: R.button, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center', minHeight: 54 },
+  input: { flex: 1, backgroundColor: C.paper, borderWidth: 1.5, borderColor: C.grain, borderRadius: R.button, paddingHorizontal: 16, fontSize: 20, color: C.ink, minHeight: 56 },
+  submit: { backgroundColor: C.ink, borderRadius: R.button, paddingHorizontal: 22, justifyContent: 'center', alignItems: 'center', minHeight: 56, borderBottomWidth: 3, borderBottomColor: '#120D09' },
   submitWide: { marginTop: 16 },
-  submitText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-  syllables: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 14, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, borderRadius: R.card, paddingVertical: 18, paddingHorizontal: 18 },
+  submitText: { color: C.grainLight, fontSize: 17, fontWeight: '800' },
+  syllables: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 14, backgroundColor: C.paper, borderWidth: 1, borderColor: C.line, borderRadius: R.card, paddingVertical: 18, paddingHorizontal: 18 },
   syllable: { fontSize: 28, lineHeight: 40, color: C.ink },
   unit: { flexDirection: 'row', alignItems: 'center' },
   // 붙은 자리: 글자 사이 좁은 틈. 띄운 자리: 벌어지고 교정부호 ∨로 표시.

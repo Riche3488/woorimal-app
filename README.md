@@ -7,6 +7,7 @@
 - 오늘의 문제(날짜 시드로 모두에게 같은 5문제, 하루 한 번, 🟩🟥⏰ 결과 공유): [docs/superpowers/specs/2026-11-19-daily-challenge.md](docs/superpowers/specs/2026-11-19-daily-challenge.md)
 - 공부 기능('모르겠어요'=오답 처리, 오답노트(복습할 문제·⭐ 담은 문제·외운 문제), 간격 복습 1→3→7일·세 번 맞히면 외움, 기록 화면에서 유형별 연습): [docs/superpowers/specs/2026-11-19-study-notebook.md](docs/superpowers/specs/2026-11-19-study-notebook.md)
 - 계속하게 만드는 장치(하루 목표 3판·도토리 연속 기록 보호권·결과 화면 다음 목표 안내·틀리면 해설 읽고 넘기기): [docs/superpowers/specs/2026-11-19-retention-1.md](docs/superpowers/specs/2026-11-19-retention-1.md)
+- 디자인(한지 디오라마): 가이드 [docs/design/art-direction.md](docs/design/art-direction.md), 자산 목록·크레딧 [docs/design/assets.md](docs/design/assets.md), 전후 비교 [docs/design/README.md](docs/design/README.md)
 
 ## 구조
 

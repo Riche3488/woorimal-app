@@ -9,6 +9,8 @@ import type { Round } from '../core/round';
 import type { QuestionType } from '../core/types';
 import type { RoundMode } from '../data/save';
 import { useGame } from '../state/GameProvider';
+import { Image } from 'expo-image';
+import { ART } from '../../assets/art';
 import { C } from '../ui/theme';
 
 export default function Play() {
@@ -41,7 +43,7 @@ export default function Play() {
           hearts={challenge ? CHALLENGE_SIZE : undefined} showHearts={!challenge}
           starred={key => !!game.save.progress.stats[key]?.starred} onToggleStar={game.toggleStar} />
       ) : (
-        <View style={s.empty}><Text style={s.emptyText}>{doneToday ? '오늘의 문제는 이미 풀었어요. 내일 새 문제가 나와요' : '풀 문제가 없어요'}</Text></View>
+        <View style={s.empty}><Image source={ART.squirrel.think} style={s.emptyArt} contentFit="contain" accessible={false} /><Text style={s.emptyText}>{doneToday ? '오늘의 문제는 이미 풀었어요. 내일 새 문제가 나와요' : '풀 문제가 없어요'}</Text></View>
       )}
     </SafeAreaView>
   );
@@ -49,6 +51,7 @@ export default function Play() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: C.sub, fontSize: 16 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24 },
+  emptyArt: { width: 160, height: 160 },
+  emptyText: { color: C.sub, fontSize: 16, fontWeight: '600', textAlign: 'center' },
 });
