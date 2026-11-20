@@ -157,3 +157,19 @@ describe('⭐ 담기', () => {
     expect(screen.queryByLabelText('담기')).toBeNull();
   });
 });
+
+test('해설 화면의 "문제가 이상해요"는 그 문제로 신고를 부르고, 판은 넘어가지 않는다', async () => {
+  const onReport = jest.fn();
+  await render(<PlayScreen questions={[originalChoice, kbsChoice]} onFinish={jest.fn()} onReport={onReport} />);
+  expect(screen.queryByText('문제가 이상해요')).toBeNull();
+  await fireEvent.press(screen.getByText('오똑이'));
+  await fireEvent.press(screen.getByText('문제가 이상해요'));
+  expect(onReport).toHaveBeenCalledWith(expect.objectContaining({ key: 'spelling:2' }));
+  expect(screen.getByText('맞춤법은?')).toBeTruthy();
+});
+
+test('신고 기능을 넘기지 않으면 신고 버튼이 없다', async () => {
+  await render(<PlayScreen questions={[originalChoice, kbsChoice]} onFinish={jest.fn()} />);
+  await fireEvent.press(screen.getByText('오똑이'));
+  expect(screen.queryByText('문제가 이상해요')).toBeNull();
+});

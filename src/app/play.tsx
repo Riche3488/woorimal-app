@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlayScreen } from '../components/PlayScreen';
 import { CHALLENGE_SIZE } from '../core/challenge';
 import { localDay } from '../core/growth';
 import type { Round } from '../core/round';
-import type { QuestionType } from '../core/types';
+import { reportUrl } from '../core/report';
+import type { AppQuestion, QuestionType } from '../core/types';
 import type { RoundMode } from '../data/save';
 import { useGame } from '../state/GameProvider';
 import { Image } from 'expo-image';
@@ -36,12 +37,17 @@ export default function Play() {
     router.replace('/result');
   };
 
+  // 웹 제보 화면을 브라우저로 연다(앱은 서버에 쓰지 않는다). 판은 그대로 이어서 풀 수 있다.
+  const report = (q: AppQuestion) => {
+    Linking.openURL(reportUrl(q, game.pack.version)).catch(() => Alert.alert('신고 화면을 열 수 없어요', '인터넷 연결을 확인해 주세요.'));
+  };
+
   return (
     <SafeAreaView style={s.screen}>
       {questions.length ? (
         <PlayScreen questions={questions} onFinish={finish} haptics={game.save.settings.haptics} testMode={game.save.settings.testMode}
           hearts={challenge ? CHALLENGE_SIZE : undefined} showHearts={!challenge}
-          starred={key => !!game.save.progress.stats[key]?.starred} onToggleStar={game.toggleStar} />
+          starred={key => !!game.save.progress.stats[key]?.starred} onToggleStar={game.toggleStar} onReport={report} />
       ) : (
         <View style={s.empty}><Image source={ART.squirrel.think} style={s.emptyArt} contentFit="contain" accessible={false} /><Text style={s.emptyText}>{doneToday ? '오늘의 문제는 이미 풀었어요. 내일 새 문제가 나와요' : '풀 문제가 없어요'}</Text></View>
       )}

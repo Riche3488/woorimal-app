@@ -32,6 +32,14 @@ export default function Settings() {
           <Switch value={save.settings.haptics} onValueChange={v => updateSettings({ haptics: v })}
             trackColor={{ true: C.grain, false: C.line }} accessibilityLabel="진동" />
         </View>
+        <View style={s.row}>
+          <View style={{ flexShrink: 1 }}>
+            <Text style={s.label}>보기로 풀기</Text>
+            <Text style={s.desc}>직접 입력하는 첫소리·뜻·속담 문제를 보기 4개 중에서 고릅니다. 오늘의 문제는 그대로예요</Text>
+          </View>
+          <Switch value={save.settings.choiceMode} onValueChange={v => updateSettings({ choiceMode: v })}
+            trackColor={{ true: C.grain, false: C.line }} accessibilityLabel="보기로 풀기" />
+        </View>
         {showTest ? (
           <>
             <View style={s.row}>

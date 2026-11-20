@@ -1,4 +1,5 @@
 // 오늘의 문제: 날짜만으로 모든 사용자에게 같은 5문제를 낸다(서버 없음). 개인 기록은 쓰지 않는다.
+import { normalizeAnswer } from './grading';
 import { dayDiff } from './growth';
 import type { RoundResult } from './round';
 import type { AppQuestion } from './types';
@@ -54,9 +55,10 @@ export function pickChallenge(questions: AppQuestion[], day: string): AppQuestio
   }
   const types = [...byType.keys()].sort((a, b) => rank(day, `type:${a}`) - rank(day, `type:${b}`) || (a < b ? -1 : 1));
   const taken = new Set<string>();
+  const answers = new Set<string>(); // 같은 정답 낱말은 한 번만
   const out: AppQuestion[] = [];
   for (let slot = 0; out.length < CHALLENGE_SIZE && taken.size < questions.length && slot < CHALLENGE_SIZE * types.length; slot++) {
-    const all = byType.get(types[slot % types.length])!.filter(q => !taken.has(q.key));
+    const all = byType.get(types[slot % types.length])!.filter(q => !taken.has(q.key) && !answers.has(normalizeAnswer(q.answer)));
     if (!all.length) continue;
     const wantEasy = out.length < EASY_SLOTS;
     const preferred = all.filter(q => q.easy === wantEasy);
@@ -66,6 +68,7 @@ export function pickChallenge(questions: AppQuestion[], day: string): AppQuestio
       return d < 0 || (d === 0 && c.key < best.key) ? c : best;
     });
     taken.add(q.key);
+    answers.add(normalizeAnswer(q.answer));
     out.push(q);
   }
   // 쉬운 문제를 앞에(어려운 문제가 없는 유형이 변별 자리를 채웠을 수 있으므로 안정 정렬).

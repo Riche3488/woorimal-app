@@ -4,7 +4,7 @@ import type { RoundResult } from '../round';
 
 const TYPES: QuestionType[] = ['meaning', 'spelling', 'spacing', 'proverb', 'chosung', 'usage'];
 const bank: AppQuestion[] = TYPES.flatMap(type => Array.from({ length: 30 }, (_, i) => ({
-  key: `${type}:${i}`, type, kind: 'choice' as const, prompt: `${type} ${i}`, answer: 'a', explain: '',
+  key: `${type}:${i}`, type, kind: 'choice' as const, prompt: `${type} ${i}`, answer: `${type}${i}`, explain: '',
   choices: ['a', 'b', 'c', 'd'], source: 'original' as const, easy: i < 5,
 })));
 
@@ -80,4 +80,15 @@ describe('난이도와 안정성', () => {
 
 test('marksFor: 모르겠어요는 x', () => {
   expect(marksFor([{ correct: false, timedOut: false, gaveUp: true } as RoundResult])).toBe('x');
+});
+
+test('오늘의 문제: 같은 정답 낱말은 한 번만', () => {
+  const twins: AppQuestion[] = (['meaning', 'chosung'] as QuestionType[]).flatMap(type => Array.from({ length: 3 }, (_, i) => ({
+    key: `${type}:${i}`, type, kind: 'typed' as const, prompt: `${type} ${i}`, answer: `낱말${i}`, explain: '', source: 'original' as const, easy: true,
+  })));
+  for (const day of ['2026-11-20', '2026-11-21', '2026-11-22']) {
+    const picked = pickChallenge(twins, day);
+    expect(picked).toHaveLength(3);
+    expect(new Set(picked.map(q => q.answer)).size).toBe(3);
+  }
 });

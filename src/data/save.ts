@@ -8,11 +8,12 @@ import type { Round } from '../core/round';
 
 export const SAVE_KEY = 'woorimal.save.v1';
 
-export type Settings = { haptics: boolean; sound: boolean; testMode: boolean };
+// choiceMode: 직접 입력하는 문제를 보기 4개 고르기로 푼다(src/core/choices.ts). 오늘의 문제는 모두에게 같아야 하므로 바꾸지 않는다.
+export type Settings = { haptics: boolean; sound: boolean; testMode: boolean; choiceMode: boolean };
 export type SaveData = { schema: 1; totalGrains: number; rounds: number; streak: Streak; daily: Daily; challenge: ChallengeRecord; progress: Progress; settings: Settings };
 
 export function defaultSave(): SaveData {
-  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null, freezes: 0 }, daily: { day: null, rounds: 0 }, challenge: { day: null, marks: '' }, progress: emptyProgress(), settings: { haptics: true, sound: true, testMode: false } };
+  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null, freezes: 0 }, daily: { day: null, rounds: 0 }, challenge: { day: null, marks: '' }, progress: emptyProgress(), settings: { haptics: true, sound: true, testMode: false, choiceMode: false } };
 }
 
 export async function loadSave(): Promise<SaveData> {

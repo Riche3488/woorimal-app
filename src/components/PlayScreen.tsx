@@ -25,9 +25,10 @@ type Props = {
   showHearts?: boolean;
   starred?: (key: string) => boolean; // ⭐ 담기(없으면 별 버튼을 숨긴다)
   onToggleStar?: (key: string) => void;
+  onReport?: (q: AppQuestion) => void; // 잘못된 문제 신고(없으면 신고 버튼을 숨긴다)
 };
 
-export function PlayScreen({ questions, onFinish, haptics = true, testMode = false, hearts, showHearts = true, starred, onToggleStar }: Props) {
+export function PlayScreen({ questions, onFinish, haptics = true, testMode = false, hearts, showHearts = true, starred, onToggleStar, onReport }: Props) {
   const [round, setRound] = useState<Round>(() => startRound(questions, Date.now(), hearts));
   const [phase, setPhase] = useState<'question' | 'feedback'>('question');
   const [now, setNow] = useState(() => Date.now());
@@ -150,6 +151,11 @@ export function PlayScreen({ questions, onFinish, haptics = true, testMode = fal
             {last.synonymHit && <Text style={s.explain}>비슷한 뜻이지만 여기서 찾는 말은 '{shown.answer}'입니다</Text>}
             {shown.explain ? <Text style={s.explain} numberOfLines={last.correct ? 4 : undefined}>{shown.explain}</Text> : null}
             <Text style={last.correct ? s.tapHint : s.nextHint}>{last.correct ? '눌러서 바로 다음 문제' : '눌러서 다음 문제'}</Text>
+            {onReport ? (
+              <Pressable onPress={() => onReport(shown)} hitSlop={10} style={s.report} accessibilityRole="link" accessibilityLabel="문제가 이상해요, 신고하기">
+                <Text style={s.reportText}>문제가 이상해요</Text>
+              </Pressable>
+            ) : null}
           </Pressable>
           </Shake>
         ) : null}
@@ -186,6 +192,8 @@ const s = StyleSheet.create({
   explain: { fontSize: 14, lineHeight: 21, color: C.sub },
   tapHint: { fontSize: 12, color: C.faint, marginTop: 4 },
   nextHint: { fontSize: 15, color: C.ink, fontWeight: '800', marginTop: 8, textAlign: 'center' },
+  report: { alignSelf: 'flex-end', paddingVertical: 2 },
+  reportText: { fontSize: 12, color: C.faint, textDecorationLine: 'underline' },
   test: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.accent, borderRadius: R.card, padding: 12, gap: 8 },
   testText: { fontSize: 14, color: C.accent, fontWeight: '700' },
   testRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

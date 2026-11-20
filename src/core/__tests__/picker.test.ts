@@ -4,7 +4,7 @@ import type { RoundResult } from '../round';
 import type { AppQuestion, QuestionType } from '../types';
 
 const q = (type: QuestionType, n: number, easy: boolean): AppQuestion => ({
-  key: `${type}:${n}`, type, kind: 'choice', prompt: 'p', answer: 'a', explain: '', choices: ['a', 'b', 'c'], source: 'original', easy,
+  key: `${type}:${n}`, type, kind: 'choice', prompt: 'p', answer: `${type}${n}`, explain: '', choices: ['a', 'b', 'c'], source: 'original', easy,
 });
 const bank = (): AppQuestion[] => {
   const out: AppQuestion[] = [];
@@ -125,4 +125,32 @@ test('pickRound: ⭐만 누르고 안 푼 문제는 안 푼 문제로 친다', (
     const keys = pickRound(bank(), p, { rng: seeded(s), now: NOW }).map(x => x.key);
     expect(keys).toContain('meaning:0');
   }
+});
+
+describe('한 판에 같은 정답 낱말은 한 번만', () => {
+  // 같은 낱말이 첫소리·뜻 두 유형으로 들어 있는 묶음(웹 묶음의 meaning:N·chosung:N 쌍).
+  const twins = (): AppQuestion[] => (['meaning', 'chosung'] as QuestionType[]).flatMap(type =>
+    Array.from({ length: 8 }, (_, i) => ({ ...q(type, i, true), answer: `낱말 ${i}` })));
+  const answers = (list: AppQuestion[]) => list.map(x => x.answer.replace(/s/g, ''));
+  test('pickRound', () => {
+    for (let s = 1; s < 10; s++) {
+      const picked = pickRound(twins(), emptyProgress(), { rng: seeded(s), now: NOW });
+      expect(picked).toHaveLength(8);
+      expect(new Set(answers(picked)).size).toBe(picked.length);
+    }
+  });
+  test('pickRound: 복습할 문제와 같은 낱말의 새 문제는 내지 않는다', () => {
+    const p = recordResults(emptyProgress(), [result('meaning:3', false)], NOW - 2 * DAY);
+    for (let s = 1; s < 10; s++) {
+      const picked = pickRound(twins(), p, { rng: seeded(s), now: NOW });
+      expect(picked.map(x => x.key)).toContain('meaning:3');
+      expect(picked.map(x => x.key)).not.toContain('chosung:3');
+    }
+  });
+  test('pickReviewRound·pickStarredRound', () => {
+    let p = recordResults(emptyProgress(), ['meaning:1', 'chosung:1', 'meaning:2'].map(k => result(k, false)), NOW - 2 * DAY);
+    expect(answers(pickReviewRound(twins(), p, { rng: seeded(), now: NOW }))).toHaveLength(2);
+    p = toggleStar(toggleStar(p, 'meaning:5'), 'chosung:5');
+    expect(pickStarredRound(twins(), p, { rng: seeded(), now: NOW })).toHaveLength(1);
+  });
 });

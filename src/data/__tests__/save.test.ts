@@ -43,7 +43,7 @@ test('테스트 모드는 기본으로 꺼져 있고, 예전 저장을 읽어도
   const old = { ...defaultSave(), settings: { haptics: false, sound: true } };
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(old));
   const loaded = await loadSave();
-  expect(loaded.settings).toEqual({ haptics: false, sound: true, testMode: false });
+  expect(loaded.settings).toEqual({ haptics: false, sound: true, testMode: false, choiceMode: false });
 });
 
 test('finishRound가 오늘 판 수를 세고, 예전 저장에는 하루 목표·도토리 기본값을 채운다', async () => {

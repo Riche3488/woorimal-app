@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { pickChallenge } from '../core/challenge';
+import { withChoiceMode } from '../core/choices';
 import { localDay } from '../core/growth';
 import { pickReviewRound, pickRound, pickStarredRound, pickTypeRound } from '../core/picker';
 import { notebookCounts } from '../core/progress';
@@ -73,13 +74,19 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
     return pack!;
   }, [pack]);
 
-  const startNormal = useCallback(() => pickRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
-  const startReview = useCallback(() => pickReviewRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
-  const startStarred = useCallback(() => pickStarredRound(currentPack().questions, save.progress, { now: Date.now() }), [currentPack, save.progress]);
+  // 설정 "보기로 풀기"를 한 판에 적용한다(오늘의 문제 제외).
+  const choiceMode = save.settings.choiceMode;
+  const start = useCallback((pick: (questions: AppQuestion[]) => AppQuestion[]) => {
+    const questions = currentPack().questions;
+    return withChoiceMode(pick(questions), questions, choiceMode);
+  }, [currentPack, choiceMode]);
+  const startNormal = useCallback(() => start(qs => pickRound(qs, save.progress, { now: Date.now() })), [start, save.progress]);
+  const startReview = useCallback(() => start(qs => pickReviewRound(qs, save.progress, { now: Date.now() })), [start, save.progress]);
+  const startStarred = useCallback(() => start(qs => pickStarredRound(qs, save.progress, { now: Date.now() })), [start, save.progress]);
   const startPractice = useCallback((type: QuestionType) => {
     setLastPracticeType(type);
-    return pickTypeRound(currentPack().questions, save.progress, type, { now: Date.now() });
-  }, [currentPack, save.progress]);
+    return start(qs => pickTypeRound(qs, save.progress, type, { now: Date.now() }));
+  }, [start, save.progress]);
 
   const startChallenge = useCallback(() => pickChallenge(currentPack().questions, localDay(new Date())), [currentPack]);
 
