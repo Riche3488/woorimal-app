@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { creditLines } from '../core/labels';
 import { REMINDER_HOURS } from '../core/reminder';
@@ -39,7 +39,7 @@ export default function Settings() {
         <Text style={s.title}>설정</Text>
         <View style={{ width: 48 }} />
       </View>
-      <View style={s.content}>
+      <ScrollView contentContainerStyle={s.content}>
         <View style={s.row}>
           <Text style={s.label}>진동</Text>
           <Switch value={save.settings.haptics} onValueChange={v => updateSettings({ haptics: v })}
@@ -95,7 +95,7 @@ export default function Settings() {
           <Text style={s.infoText}>문제 {pack.questions.length.toLocaleString()}개 · 묶음 {pack.version}</Text>
           {creditLines(pack.questions).map(line => <Text key={line} style={s.infoText}>{line}</Text>)}
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
