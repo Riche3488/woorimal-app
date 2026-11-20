@@ -2,6 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bumpStreak, localDay, type Streak } from '../core/growth';
 import { marksFor, type ChallengeRecord } from '../core/challenge';
+import type { CrosswordProgress } from '../core/crossword';
 import { bumpDaily, type Daily } from '../core/goals';
 import { emptyProgress, normalizeStat, recordResults, toggleStar, type Progress } from '../core/progress';
 import type { Round, RoundResult } from '../core/round';
@@ -11,11 +12,33 @@ export const SAVE_KEY = 'woorimal.save.v1';
 // choiceMode: 직접 입력하는 문제를 보기 4개 고르기로 푼다(src/core/choices.ts). 오늘의 문제는 모두에게 같아야 하므로 바꾸지 않는다.
 // reminder·reminderHour: 하루 한 번 기기 알림(src/core/reminder.ts, src/data/reminder.ts).
 export type Settings = { haptics: boolean; sound: boolean; testMode: boolean; choiceMode: boolean; reminder: boolean; reminderHour: number };
-// card.day: 오늘의 낱말 확인 문제를 푼 날.
-export type SaveData = { schema: 1; totalGrains: number; rounds: number; streak: Streak; daily: Daily; challenge: ChallengeRecord; card: { day: string | null }; progress: Progress; settings: Settings };
+// card.day: 오늘의 낱말 확인 문제를 푼 날. crosswords: 퍼즐 판 id별 진행.
+export type SaveData = { schema: 1; totalGrains: number; rounds: number; streak: Streak; daily: Daily; challenge: ChallengeRecord; card: { day: string | null }; crosswords: Record<string, CrosswordProgress>; progress: Progress; settings: Settings };
 
 export function defaultSave(): SaveData {
-  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null, freezes: 0 }, daily: { day: null, rounds: 0 }, challenge: { day: null, marks: '' }, card: { day: null }, progress: emptyProgress(), settings: { haptics: true, sound: true, testMode: false, choiceMode: false, reminder: false, reminderHour: 19 } };
+  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null, freezes: 0 }, daily: { day: null, rounds: 0 }, challenge: { day: null, marks: '' }, card: { day: null }, crosswords: {}, progress: emptyProgress(), settings: { haptics: true, sound: true, testMode: false, choiceMode: false, reminder: false, reminderHour: 19 } };
+}
+
+// 퍼즐 진행 저장. 낱말을 직접 맞혀 낱알을 받으면 오늘 공부한 날로 연속 기록에 센다(판 수·하루 목표는 그대로).
+export function saveCrossword(d: SaveData, id: string, progress: CrosswordProgress, grains: number, now: Date): SaveData {
+  return {
+    ...d,
+    crosswords: { ...d.crosswords, [id]: progress },
+    totalGrains: d.totalGrains + grains,
+    streak: grains > 0 ? bumpStreak(d.streak, localDay(now)) : d.streak,
+  };
+}
+
+// 저장된 퍼즐 진행을 형식에 맞게 거른다(깨진 판 기록만 버린다).
+function readCrosswords(raw: unknown): Record<string, CrosswordProgress> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, CrosswordProgress> = {};
+  for (const [id, v] of Object.entries(raw as Record<string, any>)) {
+    if (!v || !Array.isArray(v.solved) || !v.solved.every(Number.isInteger)) continue;
+    const revealed = v.revealed && typeof v.revealed === 'object' ? Object.fromEntries(Object.entries(v.revealed).filter(([, s]) => typeof s === 'string')) as Record<string, string> : {};
+    out[id] = { solved: v.solved, revealed, helps: Number.isFinite(v.helps) ? v.helps : 0 };
+  }
+  return out;
 }
 
 // 오늘의 낱말 확인 문제 한 개: 문제 기록(틀리면 오답노트)만 남기고 판·낱알·하루 목표는 세지 않는다.
@@ -39,7 +62,7 @@ export async function loadSave(): Promise<SaveData> {
         return [k, normalizeStat({ ...o, seen: num(o.seen), correct: num(o.correct), lastAt: num(o.lastAt) })];
       }));
     const progress: Progress = { triesByType: data.progress.triesByType ?? {}, stats };
-    return { ...base, ...data, progress, streak: { ...base.streak, ...data.streak }, daily: { ...base.daily, ...data.daily }, challenge: { ...base.challenge, ...data.challenge }, card: { ...base.card, ...data.card }, settings: { ...base.settings, ...data.settings } };
+    return { ...base, ...data, progress, streak: { ...base.streak, ...data.streak }, daily: { ...base.daily, ...data.daily }, challenge: { ...base.challenge, ...data.challenge }, card: { ...base.card, ...data.card }, crosswords: readCrosswords(data.crosswords), settings: { ...base.settings, ...data.settings } };
   } catch {
     return defaultSave();
   }

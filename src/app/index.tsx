@@ -105,13 +105,18 @@ export default function Home() {
             <Text style={s.primarySub}>10문제 · 하트 3개</Text>
           </PressableScale>
         </Animated.View>
-        <Animated.View entering={enterUp(4)}>
-          <PressableScale onPress={() => router.push('/notebook')} style={s.secondary} accessibilityRole="button">
+        <Animated.View entering={enterUp(4)} style={s.pair}>
+          <PressableScale onPress={() => router.push('/notebook')} style={[s.secondary, { flex: 1 }]} accessibilityRole="button">
             <Text style={s.secondaryText}>오답노트</Text>
             {counts.due > 0
               ? <View style={s.dueBadge}><Text style={s.dueText}>오늘 복습 {counts.due}</Text></View>
               : <Text style={s.secondarySub}>오늘 복습 {counts.due}</Text>}
           </PressableScale>
+          {pack.crosswords?.length ? (
+            <PressableScale onPress={() => router.push('/puzzles')} style={[s.secondary, { flex: 1 }]} accessibilityRole="button">
+              <Text style={s.secondaryText}>가로세로 퍼즐</Text>
+            </PressableScale>
+          ) : null}
         </Animated.View>
       </View>
     </SafeAreaView>
@@ -170,6 +175,7 @@ const s = StyleSheet.create({
   primary: { backgroundColor: C.ink, borderRadius: R.card, paddingVertical: 18, alignItems: 'center', borderBottomWidth: 4, borderBottomColor: '#120D09', ...elevation(2) },
   primaryText: { fontFamily: T.num.fontFamily, color: C.grainLight, fontSize: 23, lineHeight: 30 },
   primarySub: { color: '#D9CBB4', fontSize: 13, marginTop: 2, fontWeight: '600' },
+  pair: { flexDirection: 'row', gap: 10 },
   secondary: { ...paperCard, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, paddingVertical: 15 },
   secondaryText: { color: C.ink, fontSize: 16, fontWeight: '800' },
   secondarySub: { color: C.faint, fontSize: 13, fontWeight: '600' },

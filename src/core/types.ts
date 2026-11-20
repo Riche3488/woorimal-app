@@ -35,6 +35,19 @@ export type AppCard = {
   question: string;
 };
 
+// 가로세로 퍼즐 판(웹 공개 허용분). 칸 좌표는 0부터, 낱말이 지나지 않는 칸은 검은 칸.
+export type CrosswordEntry = { num: number; dir: 'across' | 'down'; row: number; col: number; answer: string; clue: string };
+export type AppCrossword = {
+  id: string;
+  level: 'easy' | 'normal' | 'hard';
+  theme: string;
+  rows: number;
+  cols: number;
+  entries: CrosswordEntry[];
+  intro: string;
+  notes: { title: string; text: string }[];
+};
+
 export type AppPack = {
   schema: 1;
   version: string;
@@ -42,6 +55,7 @@ export type AppPack = {
   counts: Record<string, number>;
   questions: AppQuestion[];
   cards?: AppCard[]; // 선택 필드: 없으면 오늘의 낱말을 숨긴다
+  crosswords?: AppCrossword[]; // 선택 필드: 없으면 퍼즐을 숨긴다
   minApp?: number; // 이 묶음을 읽으려면 필요한 앱 수준(APP_PACK_COMPAT)
   shrink?: boolean; // 문제 수를 일부러 크게 줄인 배포(예: 출처 일괄 제외)
 };

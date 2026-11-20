@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadSave, writeSave, finishRound, finishCard, defaultSave, toggleStarSave, SAVE_KEY } from '../save';
+import { loadSave, writeSave, finishRound, finishCard, saveCrossword, defaultSave, toggleStarSave, SAVE_KEY } from '../save';
 import { startRound, answer } from '../../core/round';
 import type { AppQuestion } from '../../core/types';
 
@@ -117,4 +117,20 @@ test('예전 저장(카드·알림 설정 없음)도 기본값으로 채워 읽�
   const loaded = await loadSave();
   expect(loaded.card).toEqual({ day: null });
   expect(loaded.settings).toMatchObject({ reminder: false, reminderHour: 19, choiceMode: false });
+});
+
+test('saveCrossword: 판 진행을 남기고 낱알을 더하며, 낱알을 받은 날은 연속 기록에 센다', () => {
+  const now = new Date(2026, 10, 20, 9);
+  const progress = { solved: [0], revealed: {}, helps: 0 };
+  const next = saveCrossword(defaultSave(), 'cw-023', progress, 5, now);
+  expect(next.crosswords['cw-023']).toEqual(progress);
+  expect(next.totalGrains).toBe(5);
+  expect(next.streak.lastDay).toBe('2026-11-20');
+  expect(next).toMatchObject({ rounds: 0, daily: { day: null, rounds: 0 } });
+  expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now).streak.lastDay).toBeNull();
+});
+
+test('깨진 퍼즐 진행만 버리고 읽는다', async () => {
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify({ ...defaultSave(), crosswords: { a: { solved: [1], revealed: { '0,0': '가', x: 3 }, helps: 2 }, b: { solved: 'x' }, c: null } }));
+  expect((await loadSave()).crosswords).toEqual({ a: { solved: [1], revealed: { '0,0': '가' }, helps: 2 } });
 });

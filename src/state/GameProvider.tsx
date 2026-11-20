@@ -9,7 +9,8 @@ import type { Round, RoundResult } from '../core/round';
 import type { AppPack, AppQuestion, QuestionType } from '../core/types';
 import { loadPack, refreshPack } from '../data/pack-store';
 import { scheduleReminder } from '../data/reminder';
-import { defaultSave, finishCard, finishRound, loadSave, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
+import type { CrosswordProgress } from '../core/crossword';
+import { defaultSave, finishCard, finishRound, loadSave, saveCrossword, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 
 export type Game = {
   pack: AppPack;
@@ -27,6 +28,7 @@ export type Game = {
   startChallenge(): AppQuestion[]; // 오늘 날짜로 정해진 5문제
   complete(round: Round, mode?: RoundMode): void;
   answerCard(result: RoundResult): void; // 오늘의 낱말 확인 문제
+  updateCrossword(id: string, progress: CrosswordProgress, grains: number): void; // 퍼즐 진행·낱알
   updateSettings(patch: Partial<Settings>): void;
   resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
 };
@@ -139,6 +141,14 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
     });
   }, []);
 
+  const updateCrossword = useCallback((id: string, progress: CrosswordProgress, grains: number) => {
+    setSave(prev => {
+      const next = saveCrossword(prev, id, progress, grains, new Date());
+      writeSave(next).catch(() => {});
+      return next;
+    });
+  }, []);
+
   const counts = useMemo(() => (pack ? notebookCounts(save.progress, pack.questions, localDay(new Date())) : { review: 0, due: 0, starred: 0, mastered: 0 }), [pack, save.progress]);
 
   // 학습 알림: 기록·설정이 바뀔 때마다 다음 한 번을 다시 예약한다(끄면 지운다).
@@ -157,7 +167,7 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
 
   if (!ready || !pack) return <>{fallback}</>;
   return (
-    <GameContext.Provider value={{ pack, save, counts, lastRound, lastMode, previousSave, lastPracticeType, startNormal, startReview, startStarred, startPractice, toggleStar, startChallenge, complete, answerCard, updateSettings, resetRecords }}>
+    <GameContext.Provider value={{ pack, save, counts, lastRound, lastMode, previousSave, lastPracticeType, startNormal, startReview, startStarred, startPractice, toggleStar, startChallenge, complete, answerCard, updateCrossword, updateSettings, resetRecords }}>
       {children}
     </GameContext.Provider>
   );

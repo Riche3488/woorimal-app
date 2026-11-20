@@ -154,3 +154,28 @@ describe('parsePack: 오늘의 낱말 카드(선택 필드)', () => {
     expect(parsePack({ ...base(), cards: 'x' })!.cards).toEqual([]);
   });
 });
+
+describe('parsePack: 가로세로 퍼즐(선택 필드)', () => {
+  const base = () => ({ schema: 1, version: 'v', generatedAt: '2026-11-20T00:00:00Z', questions: [
+    { key: 'usage:a', type: 'usage', kind: 'choice', prompt: 'p', answer: 'x', choices: ['x', 'y'], explain: '', source: 'original', easy: true },
+  ] });
+  const board = { id: 'cw-1', level: 'easy', theme: '학교', rows: 5, cols: 5, intro: '', notes: [], entries: [
+    { num: 1, dir: 'across', row: 0, col: 0, answer: '운동화', clue: 'a' },
+    { num: 1, dir: 'down', row: 0, col: 0, answer: '운동장', clue: 'b' },
+  ] };
+  test('맞는 판은 받고, 판 밖으로 나가거나 엇갈린 글자가 다른 판은 뺀다', () => {
+    const out = (b: unknown) => parsePack({ ...base(), crosswords: [b] })!.crosswords;
+    expect(out(board)).toEqual([board]);
+    expect(out({ ...board, entries: [{ ...board.entries[0], col: 3 }] })).toEqual([]);
+    expect(out({ ...board, entries: [board.entries[0], { ...board.entries[1], answer: '가동장' }] })).toEqual([]);
+    expect(out({ ...board, level: 'x' })).toEqual([]);
+  });
+});
+
+test('내장 묶음: 카드·퍼즐이 하나도 빠지지 않고 검사를 통과한다', () => {
+  const bundled = require('../../../assets/pack.json');
+  const parsed = parsePack(bundled)!;
+  expect(parsed.cards!.length).toBe(bundled.cards.length);
+  expect(parsed.crosswords!.length).toBe(bundled.crosswords.length);
+  expect(parsed.crosswords!.length).toBeGreaterThan(0);
+});

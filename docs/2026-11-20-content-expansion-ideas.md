@@ -1,6 +1,6 @@
 # 콘텐츠 확장·경험 개선 방안
 
-작성일: 2026-11-20 · 상태: 1~2단계 중 C1(자동분)·C2(방법 B)·C3(출제)·E5 구현함 → [구현 기록](superpowers/specs/2026-11-20-content-quality-1.md). 3단계 C4·E2·E4 구현함 → [구현 기록](superpowers/specs/2026-11-20-word-card-collection-reminder.md). 나머지는 제안
+작성일: 2026-11-20 · 상태: 1~2단계 중 C1(자동분)·C2(방법 B)·C3(출제)·E5 구현함 → [구현 기록](superpowers/specs/2026-11-20-content-quality-1.md). 3단계 C4·E2·E4 구현함 → [구현 기록](superpowers/specs/2026-11-20-word-card-collection-reminder.md). C5 퍼즐(공개 8판) 구현함 → [구현 기록](superpowers/specs/2026-11-20-crossword.md). 나머지는 제안
 
 웹 저장소 `D:\projects\woorimal_contest`가 이미 가진 자료로 앱의 콘텐츠를 넓히고 풀이 경험을 낫게 할 방법을 정리했다. 수치는 2026-11-20 웹 저장소의 `public/app/pack.json`·`data/`를 `node -e`로 센 값이다.
 
