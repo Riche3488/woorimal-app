@@ -1,6 +1,6 @@
 # Google Play 출시 점검과 할 일
 
-작성일: 2026-11-20 · 상태: 1단계(코드·저장소) 끝, 2단계부터 진행 전. 웹 개인정보처리방침은 커밋했으나 아직 배포 전
+작성일: 2026-11-20 · 상태: 1단계 끝, 2단계는 에뮬레이터 확인·AAB 빌드까지 끝(실기기 확인·keystore 백업 남음). 웹 개인정보처리방침 배포함(2026-11-20)
 
 앱을 Google Play에 처음 올리기 전에 저장소 안에서 확인할 수 있는 것을 점검했고, 남은 일을 순서대로 적었다. Play 정책 수치(테스터 수, 대상 API 등)는 자주 바뀌므로 진행할 때 Play Console 안내로 다시 확인한다.
 
@@ -42,7 +42,7 @@
 ### 1단계: 코드·저장소 (이 저장소와 웹 저장소)
 
 - [x] F1 앱 전용 개인정보처리방침: 웹 `public/app/privacy.html`(웹 커밋 3975b7c), 앱 설정에 "개인정보처리방침" 줄(`src/core/app-info.ts`의 `PRIVACY_URL`)
-  - [ ] **웹 배포**(`firebase.cmd deploy --only hosting`) 뒤 https://woorimal-contest.co.kr/app/privacy.html 이 열리는지 확인
+  - [x] 웹 배포(`firebase.cmd deploy --only hosting`, 웹 저장소에서) 뒤 https://woorimal-contest.co.kr/app/privacy.html 200 확인
 - [x] F3 설정 정보 줄에 `앱 1.0.0`, 신고 대상 글에 `앱 1.0.0` 추가(`src/data/build.ts`의 `APP_VERSION`, expo-constants)
 - [x] F4 루트 `ErrorBoundary`(`src/components/ErrorScreen.tsx`: 다시 시도·처음으로)
 - [x] F2 `expo-glass-effect`·`expo-symbols`·`@expo/ui`·`expo-web-browser`·`expo-device` 제거(expo-router의 선택 의존성이라 빼도 됨). `expo-constants`(expo-router 필수)·`expo-system-ui`·`react-native-web`은 남김. `expo-doctor` 20/20, `expo export --platform android` 성공
@@ -55,13 +55,19 @@
 
 ### 2단계: 빌드와 실기기 확인
 
-- [ ] `npx eas-cli build -p android --profile preview`로 APK를 만들어 실기기 2대 이상(Android 10 이하 1대, Android 14 이상 1대 권장)에서 확인
-  - 첫 실행 비행기 모드(내장 묶음으로 풀이), 인터넷 연결 뒤 묶음 갱신
-  - 알림 켜기·권한 거절·시간 바꾸기, 재부팅 뒤 알림 유지
-  - 화면 낮은 기기·큰 글꼴(시스템 글꼴 크기 최대)에서 버튼 가림 없음
-  - 뒤로 가기 버튼, 앱 전환 후 복귀, 영상 재생
-- [ ] `npx eas-cli build -p android --profile production`으로 AAB 생성
-- [ ] EAS가 만든 업로드 키는 EAS 서버에 있다. `npx eas-cli credentials`로 keystore를 내려받아 저장소 밖 안전한 곳에 백업
+2026-11-20 에뮬레이터(Android 16, API 36)에서 preview 빌드로 확인한 결과. 실기기 확인은 남았다.
+
+- [x] preview APK 빌드·설치(versionCode 1, targetSdk 36)
+  - [x] 홈·설정·오답노트·기록·퍼즐 목록·문제 풀이·결과 화면 표시, 비정상 종료 없음
+  - [x] 설정의 개인정보처리방침 → 브라우저로 https://woorimal-contest.co.kr/app/privacy.html 열림
+  - [x] 앱 데이터 지우고 인터넷 끈 첫 실행: 내장 묶음으로 바로 풀이
+  - [x] 알림: 켤 때 권한 요청, 거절하면 안내 후 꺼진 채로, 허용하면 오후 7시 예약(부정확 알람이라 최대 1시간 늦을 수 있음). 재부팅 뒤에도 예약 유지
+  - [x] preview 빌드에서 7번 누르면 테스트 모드 스위치가 나타남
+  - [x] 글꼴 1.3배는 문제없음. **2배에서 찾은 문제를 고침**(커밋 e78f31a): '뒤로'가 두 줄로 꺾임(7개 화면), 홈 '다음 레벨까지' 화면 밖, '오늘' 도장·오늘의 낱말 잘림, 오답노트 탭 꺾임. 고친 빌드에서 홈·오답노트를 다시 확인함(나머지 화면의 '뒤로'는 같은 수정이라 실기기 확인 때 함께 봄)
+  - [x] **권한 정리**: 라이브러리가 넣던 `SYSTEM_ALERT_WINDOW`(다른 앱 위에 그리기)·`c2dm.permission.RECEIVE`(FCM 서버 푸시)·`BIND_GET_INSTALL_REFERRER_SERVICE`(설치 리퍼러)를 `app.json`의 `blockedPermissions`로 막음. 남은 권한: 인터넷·네트워크 상태·알림·부팅 완료 수신·진동·WAKE_LOCK·앱 배지(expo-notifications의 런처별 배지 권한 포함, 일반 권한)
+- [ ] **실기기 2대 이상**(Android 10 이하 1대, Android 14 이상 1대 권장)에서 preview APK 설치해 확인: 실제 알림이 오는지, 영상 재생, 뒤로 가기 버튼, 앱 전환 후 복귀, 화면 낮은 기기. 설치 링크는 `npx eas-cli build:list`의 최신 preview
+- [x] production AAB 빌드(versionCode 3. 첫 시도가 업로드 전에 실패하면서 번호 2를 건너뜀, Play에는 문제없음)
+- [ ] EAS가 만든 업로드 키는 EAS 서버에 있다. `npx eas-cli credentials` → Android → production → Keystore → Download로 내려받아 저장소 밖 안전한 곳에 백업(대화형 명령이라 직접 실행)
 
 ### 3단계: Play Console 계정·앱 만들기
 
