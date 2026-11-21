@@ -39,16 +39,17 @@
 ```powershell
 npm.cmd install
 npm.cmd test            # Jest
-npx tsc --noEmit        # 타입 검사
-npx expo start --android
+npx.cmd tsc --noEmit    # 타입 검사
+npx.cmd expo start --android               # 기기가 LAN으로 개발 서버에 닿을 때
+npx.cmd expo start --android --localhost   # USB 연결 기기(adb reverse)로 붙을 때
 ```
 
 ## Android 빌드
 
 ```powershell
-npx eas-cli login
-npx eas-cli build -p android --profile preview      # 설치용 APK
-npx eas-cli build -p android --profile production   # Play 스토어용 AAB
+npx.cmd eas-cli login
+npx.cmd eas-cli build -p android --profile preview      # 설치용 APK
+npx.cmd eas-cli build -p android --profile production   # Play 스토어용 AAB
 ```
 
 `versionCode`는 EAS 서버가 관리한다(`appVersionSource: remote`, production 빌드마다 자동 증가). 사용자에게 보이는 버전은 `app.json`의 `version`을 올린다. 출시 점검과 할 일: [docs/2026-11-20-play-store-release.md](docs/2026-11-20-play-store-release.md)

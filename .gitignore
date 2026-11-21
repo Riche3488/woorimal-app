@@ -49,3 +49,7 @@ assets/art/src/
 
 # 로컬 MCP 서버 설정(접속 정보가 들어갈 수 있음)
 .mcp.json
+
+# 빌드 결과물(서명된 출시 파일)
+*.aab
+*.apk
