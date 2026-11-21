@@ -5,6 +5,7 @@ import Puzzles from '../../app/puzzles';
 import { emptyCrossword, type CrosswordProgress } from '../../core/crossword';
 import type { AppCrossword, AppPack } from '../../core/types';
 import { defaultSave } from '../../data/save';
+import { localDay } from '../../core/growth';
 import { GameContextProvider, type Game } from '../../state/GameProvider';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -65,12 +66,10 @@ describe('한 판', () => {
     expect(update).not.toHaveBeenCalled();
     expect(screen.getByText('다시 생각해 봐요')).toBeTruthy();
   });
-  test('엇갈리는 낱말로 채워진 칸은 입력 모양으로 보이고, 글자 보기는 도움으로 센다', async () => {
-    const update = jest.fn();
-    await show(<Puzzle />, game({ 'cw-023': { solved: [1], revealed: {}, helps: 0 } }, update));
+  test('엇갈리는 낱말로 채워진 칸은 입력 모양으로 보이고, 글자 보기는 없다', async () => {
+    await show(<Puzzle />, game({ 'cw-023': { solved: [1], revealed: {}, helps: 0 } }));
     expect(screen.getByLabelText('채워진 글자 운○○')).toBeTruthy();
-    await fireEvent.press(screen.getByText('글자 보기'));
-    expect(update).toHaveBeenCalledWith('cw-023', { solved: [1], revealed: { '0,3': '동' }, helps: 1 }, 0);
+    expect(screen.queryByText('글자 보기')).toBeNull();
   });
   test('겹치는 칸을 다시 누르면 방향이 바뀐다', async () => {
     await show(<Puzzle />, game());
@@ -86,12 +85,20 @@ describe('한 판', () => {
   });
 });
 
-describe('초성 보기', () => {
-  test('누르면 초성을 저장하고, 입력 모양과 판에 초성이 보인다', async () => {
+describe('초성 보기 찬스(하루 한 번)', () => {
+  test('누르면 초성을 저장하고 오늘 찬스를 쓴다', async () => {
     const update = jest.fn();
     await show(<Puzzle />, game({}, update));
-    await fireEvent.press(screen.getByText('초성 보기'));
-    expect(update).toHaveBeenCalledWith('cw-023', { solved: [], revealed: {}, helps: 1, chosung: [0] }, 0);
+    await fireEvent.press(screen.getByText('초성 보기 찬스'));
+    expect(update).toHaveBeenCalledWith('cw-023', { solved: [], revealed: {}, helps: 1, chosung: [0] }, 0, true);
+  });
+  test('오늘 찬스를 썼으면 누를 수 없고 내일 다시 쓸 수 있다고 알린다', async () => {
+    const update = jest.fn();
+    const g = game({}, update);
+    g.save = { ...g.save, chance: { day: localDay(new Date()) } };
+    await show(<Puzzle />, g);
+    expect(screen.queryByText('초성 보기 찬스')).toBeNull();
+    expect(screen.getByText('찬스는 내일 다시')).toBeTruthy();
   });
   test('초성을 본 낱말은 초성 모양으로 보이고, 맞히면 낱알 3개', async () => {
     const update = jest.fn();

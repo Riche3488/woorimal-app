@@ -1,5 +1,5 @@
 // 가로세로 퍼즐 한 판: 판을 작게 보여 주고, 고른 낱말의 힌트를 보며 낱말을 통째로 입력한다.
-// 이미 채워진 칸(엇갈리는 낱말·글자 보기)은 입력 모양(운○○)으로 알려 준다. 초성 보기는 빈칸을 초성으로(운ㄷㅎ) 보여 준다.
+// 이미 채워진 칸(엇갈리는 낱말)은 입력 모양(운○○)으로 알려 준다. 도움은 하루 한 번(모든 판 통틀어) 쓰는 초성 보기 찬스뿐이고, 빈칸을 초성으로(운ㄷㅎ) 보여 준다.
 // 묶음의 판과 기기에서 만든 조합 퍼즐(save.madeCrosswords)을 같은 화면에서 푼다. 다 풀면 학습 안내를 보여 준다.
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -8,8 +8,9 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Shake } from '../components/art';
 import {
-  boardChosung, boardLetters, buildGrid, cellKey, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, revealLetter, showChosung, solveEntry,
+  boardChosung, boardLetters, buildGrid, cellKey, chanceLeft, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, showChosung, solveEntry,
 } from '../core/crossword';
+import { localDay } from '../core/growth';
 import { useGame } from '../state/GameProvider';
 import { C, paperCard, R, T } from '../ui/theme';
 
@@ -64,13 +65,11 @@ export default function Puzzle() {
     const nextOpen = board.entries.findIndex((_, i) => !r.progress.solved.includes(i));
     if (nextOpen >= 0) setSelected(nextOpen);
   };
-  const reveal = () => {
-    const next = revealLetter(board, progress, selected);
-    if (next !== progress) updateCrossword(board.id, next, 0);
-  };
+  const hasChance = chanceLeft(save.chance.day, localDay(new Date()));
   const chosung = () => {
+    if (!hasChance) return;
     const next = showChosung(board, progress, selected);
-    if (next !== progress) updateCrossword(board.id, next, 0);
+    if (next !== progress) updateCrossword(board.id, next, 0, true);
   };
   const chosungShown = progress.chosung?.includes(selected) ?? false;
   const pattern = entryPattern(board, selected, letters, progress);
@@ -135,10 +134,9 @@ export default function Puzzle() {
                       {feedback ? (feedback.ok ? `정답! +${feedback.grains}` : '다시 생각해 봐요') : ''}
                     </Text>
                     <View style={s.helps}>
-                      {chosungShown ? null : (
-                        <Pressable onPress={chosung} hitSlop={8} accessibilityRole="button" accessibilityHint="맞히면 낱알이 3개로 줄어요"><Text style={s.help}>초성 보기</Text></Pressable>
-                      )}
-                      <Pressable onPress={reveal} hitSlop={8} accessibilityRole="button"><Text style={s.help}>글자 보기</Text></Pressable>
+                      {chosungShown ? null : hasChance ? (
+                        <Pressable onPress={chosung} hitSlop={8} accessibilityRole="button" accessibilityHint="하루에 한 번만 쓸 수 있고, 맞히면 낱알이 3개로 줄어요"><Text style={s.help}>초성 보기 찬스</Text></Pressable>
+                      ) : <Text style={s.helpOff}>찬스는 내일 다시</Text>}
                     </View>
                   </View>
                 </>
@@ -196,6 +194,7 @@ const s = StyleSheet.create({
   feedback: { fontSize: 14, fontWeight: '800' },
   helps: { flexDirection: 'row', gap: 16 },
   help: { fontSize: 13, color: C.sub, textDecorationLine: 'underline' },
+  helpOff: { fontSize: 13, color: C.faint },
   doneCard: { ...paperCard, padding: 18, gap: 10, backgroundColor: C.goodSoft },
   doneTitle: { ...T.title, fontSize: 22, color: C.good },
   doneSub: { fontSize: 13, color: C.sub, fontWeight: '700' },

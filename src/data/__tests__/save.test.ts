@@ -130,6 +130,18 @@ test('saveCrossword: 판 진행을 남기고 낱알을 더하며, 낱알을 받�
   expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now).streak.lastDay).toBeNull();
 });
 
+test('saveCrossword: 찬스를 쓰면 그날을 남긴다. 예전 저장에는 찬스 기록이 없다', async () => {
+  const now = new Date(2026, 10, 21, 9);
+  const progress = { solved: [], revealed: {}, helps: 1, chosung: [0] };
+  expect(defaultSave().chance).toEqual({ day: null });
+  expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now, true).chance).toEqual({ day: '2026-11-21' });
+  expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now).chance).toEqual({ day: null });
+  const old: Record<string, unknown> = { ...defaultSave() };
+  delete old.chance;
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(old));
+  expect((await loadSave()).chance).toEqual({ day: null });
+});
+
 test('깨진 퍼즐 진행만 버리고 읽는다', async () => {
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify({ ...defaultSave(), crosswords: { a: { solved: [1], revealed: { '0,0': '가', x: 3 }, helps: 2 }, b: { solved: 'x' }, c: null } }));
   expect((await loadSave()).crosswords).toEqual({ a: { solved: [1], revealed: { '0,0': '가' }, helps: 2 } });

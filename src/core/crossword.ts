@@ -4,10 +4,11 @@ import { getChosung, normalizeAnswer } from './grading';
 import type { AppCrossword, CrosswordEntry } from './types';
 
 export const CROSSWORD_LEVELS = { easy: '쉬움', normal: '보통', hard: '어려움' } as const;
-export const CROSSWORD_GRAINS = 5; // 낱말 하나를 직접 맞히면 받는 낱알(글자 보기로 채운 낱말은 0)
-export const CROSSWORD_HINT_GRAINS = 3; // 초성을 보고 맞힌 낱말의 낱알
+export const CROSSWORD_GRAINS = 5; // 낱말 하나를 직접 맞히면 받는 낱알(엇갈리는 낱말로 저절로 찬 낱말은 0)
+export const CROSSWORD_HINT_GRAINS = 3; // 초성 보기 찬스를 쓰고 맞힌 낱말의 낱알
 
 // chosung: 초성을 보여 준 낱말 번호(entries의 순서). 예전 저장에는 없으므로 선택 필드.
+// revealed: 예전 '글자 보기'로 연 칸(기능은 없앴고, 이미 연 칸은 그대로 보여 준다).
 export type CrosswordProgress = { solved: number[]; revealed: Record<string, string>; helps: number; chosung?: number[] };
 export type GridCell = { answer: string; across?: number; down?: number; num?: number };
 
@@ -32,7 +33,7 @@ export function buildGrid(board: AppCrossword): { rows: number; cols: number; ce
   return { rows: board.rows, cols: board.cols, cells };
 }
 
-// 판에 채워진 글자: 푼 낱말의 글자 + 글자 보기로 보여 준 글자.
+// 판에 채워진 글자: 푼 낱말의 글자 + 예전 글자 보기로 연 글자.
 export function boardLetters(board: AppCrossword, p: CrosswordProgress): Record<string, string> {
   const out: Record<string, string> = { ...p.revealed };
   for (const i of p.solved) {
@@ -64,7 +65,10 @@ export function boardChosung(board: AppCrossword, p: CrosswordProgress): Record<
   return out;
 }
 
-// 초성 보기: 그 낱말의 모든 글자 초성을 보여 준다(도움 1번). 맞히면 낱알이 줄어든다.
+// 초성 보기 찬스는 하루에 한 번(모든 판 통틀어). day: 마지막으로 찬스를 쓴 날(save.chance.day).
+export const chanceLeft = (day: string | null, today: string) => day !== today;
+
+// 초성 보기: 그 낱말의 모든 글자 초성을 보여 준다(도움 1번). 맞히면 낱알이 줄어든다. 하루 한 번 제한은 화면이 chanceLeft로 건다.
 export function showChosung(board: AppCrossword, p: CrosswordProgress, index: number): CrosswordProgress {
   if (!board.entries[index] || p.solved.includes(index) || p.chosung?.includes(index)) return p;
   return { ...p, chosung: [...(p.chosung ?? []), index], helps: p.helps + 1 };
@@ -86,18 +90,6 @@ export function solveEntry(board: AppCrossword, p: CrosswordProgress, index: num
   if (!e || p.solved.includes(index) || normalizeAnswer(input) !== normalizeAnswer(e.answer)) return { progress: p, correct: false, grains: 0 };
   const grains = p.chosung?.includes(index) ? CROSSWORD_HINT_GRAINS : CROSSWORD_GRAINS;
   return { progress: settle(board, { ...p, solved: [...p.solved, index] }), correct: true, grains };
-}
-
-// 글자 보기: 그 낱말의 빈칸 하나(앞에서부터)를 보여 준다.
-export function revealLetter(board: AppCrossword, p: CrosswordProgress, index: number): CrosswordProgress {
-  const e = board.entries[index];
-  if (!e || p.solved.includes(index)) return p;
-  const letters = boardLetters(board, p);
-  const answer = Array.from(e.answer);
-  const k = entryCells(e).findIndex(([r, c]) => !letters[cellKey(r, c)]);
-  if (k < 0) return settle(board, p);
-  const [r, c] = entryCells(e)[k];
-  return settle(board, { ...p, revealed: { ...p.revealed, [cellKey(r, c)]: answer[k] }, helps: p.helps + 1 });
 }
 
 export const isComplete = (board: AppCrossword, p: CrosswordProgress) => board.entries.every((_, i) => p.solved.includes(i));

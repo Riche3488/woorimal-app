@@ -1,5 +1,5 @@
 import {
-  boardChosung, boardLetters, buildGrid, CROSSWORD_GRAINS, CROSSWORD_HINT_GRAINS, entryCells, entryPattern, isComplete, revealLetter, showChosung, solveEntry, emptyCrossword,
+  boardChosung, boardLetters, buildGrid, CROSSWORD_GRAINS, CROSSWORD_HINT_GRAINS, entryCells, entryPattern, isComplete, chanceLeft, showChosung, solveEntry, emptyCrossword,
 } from '../crossword';
 import type { AppCrossword } from '../types';
 
@@ -40,13 +40,10 @@ test('boardLetters·entryPattern: 푼 낱말과 보여 준 글자가 판에 채�
   expect(entryPattern(board, 2, letters)).toBe('장○');
 });
 
-test('revealLetter: 빈 칸 하나를 보여 주고 도움 수를 센다. 모두 차면 그 낱말을 푼 것으로', () => {
-  let p = revealLetter(board, emptyCrossword(), 2);
-  expect(p.revealed).toEqual({ '2,2': '장' });
-  expect(p.helps).toBe(1);
-  p = revealLetter(board, p, 2);
-  expect(p.solved).toEqual([2]);
-  expect(revealLetter(board, p, 2)).toBe(p);
+test('chanceLeft: 초성 보기 찬스는 하루에 한 번(모든 판 통틀어)', () => {
+  expect(chanceLeft(null, '2026-11-21')).toBe(true);
+  expect(chanceLeft('2026-11-20', '2026-11-21')).toBe(true);
+  expect(chanceLeft('2026-11-21', '2026-11-21')).toBe(false);
 });
 
 test('isComplete: 모든 낱말을 풀면 끝', () => {
