@@ -82,7 +82,7 @@
 | --- | --- |
 | 카테고리 | 교육 |
 | 태그 | 교육, 퀴즈, 언어 학습(Console이 보여 주는 목록에서 고름) |
-| 이메일 | 개발자 연락 이메일(공개됨) |
+| 이메일 | woorimal3488@gmail.com (앱 전용, 공개됨. 개인정보처리방침 문의처와 같다) |
 | 웹사이트 | https://woorimal-contest.co.kr |
 | 개인정보처리방침 | https://woorimal-contest.co.kr/app/privacy.html |
 
