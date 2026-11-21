@@ -16,8 +16,9 @@ export function sourceNote(source: Source): string | null {
 }
 
 // 설정 화면의 출처 표시. 뜻풀이는 표준국어대사전(CC BY-SA 2.0 KR)을 쓰므로 늘 밝힌다.
+// 그림·영상은 AI로 만들었음을 밝힌다(법 의무는 없지만 Higgsfield 약관 5.2·5.5에 맞춤, docs/design/assets.md).
 export function creditLines(questions: { source: Source }[]): string[] {
-  const lines = ['뜻풀이: 국립국어원 표준국어대사전(CC BY-SA 2.0 KR)'];
+  const lines = ['뜻풀이: 국립국어원 표준국어대사전(CC BY-SA 2.0 KR)', '그림·영상: AI 생성(Higgsfield)'];
   if (questions.some(q => q.source === 'kbs')) lines.push('방송 기반 문제 출처: KBS 우리말 겨루기');
   return lines;
 }
