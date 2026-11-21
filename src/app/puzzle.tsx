@@ -1,5 +1,5 @@
 // 가로세로 퍼즐 한 판: 판을 작게 보여 주고, 고른 낱말의 힌트를 보며 낱말을 통째로 입력한다.
-// 이미 채워진 칸(엇갈리는 낱말)은 입력 모양(운○○)으로 알려 준다. 도움은 초성 보기 찬스뿐이고(하루 한 번 + 판을 다 풀 때마다 하나 더), 빈칸을 초성으로(운ㄷㅎ) 보여 준다.
+// 이미 채워진 칸(엇갈리는 낱말)은 입력 모양(운○○)으로 알려 준다. 도움은 초성 보기 찬스뿐이고(하루 한 번 + 판을 다 풀 때마다 하나 더, 최대 3개까지 모인다), 빈칸을 초성으로(운ㄷㅎ) 보여 준다.
 // 묶음의 판과 기기에서 만든 조합 퍼즐(save.madeCrosswords)을 같은 화면에서 푼다. 다 풀면 학습 안내를 보여 준다.
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -8,7 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Shake } from '../components/art';
 import {
-  boardChosung, boardLetters, buildGrid, cellKey, chanceCount, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, showChosung, solveEntry,
+  boardChosung, boardLetters, buildGrid, cellKey, CHANCE_BONUS_MAX, chanceCount, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, showChosung, solveEntry,
 } from '../core/crossword';
 import { localDay } from '../core/growth';
 import { useGame } from '../state/GameProvider';
@@ -27,7 +27,7 @@ export default function Puzzle() {
   const [selected, setSelected] = useState(Math.max(0, firstOpen));
   const [text, setText] = useState('');
   const [feedback, setFeedback] = useState<{ ok: boolean; n: number; grains: number } | null>(null);
-  const [earned, setEarned] = useState(false);
+  const [earned, setEarned] = useState<'got' | 'full' | null>(null);
 
   if (!board || !grid) {
     return (
@@ -61,9 +61,12 @@ export default function Puzzle() {
     setFeedback(f => ({ ok: r.correct, n: (f?.n ?? 0) + 1, grains: r.grains }));
     if (!r.correct) return;
     if (save.settings.haptics) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    // 이번에 판을 다 풀면 덤 찬스를 하나 받는다.
+    // 이번에 판을 다 풀면 덤 찬스를 하나 받는다(가득이면 못 받는다).
     const completed = isComplete(board, r.progress);
-    if (completed) { updateCrossword(board.id, r.progress, r.grains, { completed: true }); setEarned(true); }
+    if (completed) {
+      updateCrossword(board.id, r.progress, r.grains, { completed: true });
+      setEarned(save.chance.bonus >= CHANCE_BONUS_MAX ? 'full' : 'got');
+    }
     else updateCrossword(board.id, r.progress, r.grains);
     setText('');
     const nextOpen = board.entries.findIndex((_, i) => !r.progress.solved.includes(i));
@@ -107,11 +110,13 @@ export default function Puzzle() {
           }))}
         </View>
 
+        {earned ? (
+          <Text style={s.earned}>{earned === 'got' ? '초성 보기 찬스를 하나 더 받았어요' : `찬스는 ${CHANCE_BONUS_MAX}개까지 모을 수 있어요`}</Text>
+        ) : null}
         {done ? (
           <View style={s.doneCard}>
             <Text style={s.doneTitle}>다 풀었어요!</Text>
             <Text style={s.doneSub}>낱말 {board.entries.length}개 · 힌트 {progress.helps}번</Text>
-            {earned ? <Text style={s.earned}>초성 보기 찬스를 하나 더 받았어요</Text> : null}
             {board.intro ? <Text style={s.body}>{board.intro}</Text> : null}
             {board.notes.map(n => (
               <View key={n.title} style={s.note}>
@@ -203,7 +208,7 @@ const s = StyleSheet.create({
   doneCard: { ...paperCard, padding: 18, gap: 10, backgroundColor: C.goodSoft },
   doneTitle: { ...T.title, fontSize: 22, color: C.good },
   doneSub: { fontSize: 13, color: C.sub, fontWeight: '700' },
-  earned: { fontSize: 14, color: C.accent, fontWeight: '800' },
+  earned: { fontSize: 14, color: C.accent, fontWeight: '800', textAlign: 'center' },
   body: { fontSize: 14, lineHeight: 21, color: C.ink },
   note: { gap: 4 },
   noteTitle: { fontSize: 14, fontWeight: '800', color: C.ink },

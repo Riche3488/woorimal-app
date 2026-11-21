@@ -65,7 +65,7 @@ export function boardChosung(board: AppCrossword, p: CrosswordProgress): Record<
   return out;
 }
 
-// 초성 보기 찬스(save.chance): 하루 한 번 몫(모든 판 통틀어) + 판을 다 풀 때마다 하나씩 모으는 덤.
+// 초성 보기 찬스(save.chance): 하루 한 번 몫(모든 판 통틀어) + 판을 다 풀 때마다 하나씩 모으는 덤(최대 CHANCE_BONUS_MAX개).
 // day: 오늘 몫을 쓴 날, bonus: 모아 둔 덤 찬스 수. 쓸 때는 오늘 몫부터 쓴다.
 export type ChanceState = { day: string | null; bonus: number };
 export const chanceCount = (c: ChanceState, today: string) => (c.day !== today ? 1 : 0) + c.bonus;
@@ -73,7 +73,8 @@ export function spendChance(c: ChanceState, today: string): ChanceState {
   if (c.day !== today) return { ...c, day: today };
   return c.bonus > 0 ? { ...c, bonus: c.bonus - 1 } : c;
 }
-export const earnChance = (c: ChanceState): ChanceState => ({ ...c, bonus: c.bonus + 1 });
+export const CHANCE_BONUS_MAX = 3; // 덤 찬스는 이만큼만 모인다
+export const earnChance = (c: ChanceState): ChanceState => (c.bonus >= CHANCE_BONUS_MAX ? c : { ...c, bonus: c.bonus + 1 });
 
 // 초성 보기: 그 낱말의 모든 글자 초성을 보여 준다(도움 1번). 맞히면 낱알이 줄어든다. 찬스 수 제한은 화면이 chanceCount로 건다.
 export function showChosung(board: AppCrossword, p: CrosswordProgress, index: number): CrosswordProgress {

@@ -1,5 +1,5 @@
 import {
-  boardChosung, boardLetters, buildGrid, CROSSWORD_GRAINS, CROSSWORD_HINT_GRAINS, entryCells, entryPattern, isComplete, chanceCount, earnChance, spendChance, showChosung, solveEntry, emptyCrossword,
+  boardChosung, boardLetters, buildGrid, CROSSWORD_GRAINS, CROSSWORD_HINT_GRAINS, entryCells, entryPattern, isComplete, CHANCE_BONUS_MAX, chanceCount, earnChance, spendChance, showChosung, solveEntry, emptyCrossword,
 } from '../crossword';
 import type { AppCrossword } from '../types';
 
@@ -53,6 +53,14 @@ test('찬스: 하루 한 번 몫 + 판을 다 풀어 모은 덤. 쓸 때는 오�
   expect(chanceCount(c, '2026-11-22')).toBe(2); // 다음 날엔 오늘 몫이 다시 생긴다
   c = spendChance(c, today);
   expect(c).toEqual({ day: today, bonus: 0 });
+});
+
+test('찬스: 덤은 최대 3개까지만 모인다', () => {
+  expect(CHANCE_BONUS_MAX).toBe(3);
+  let c = { day: null, bonus: 0 } as { day: string | null; bonus: number };
+  for (let k = 0; k < 5; k++) c = earnChance(c);
+  expect(c.bonus).toBe(3);
+  expect(earnChance(c)).toBe(c);
 });
 
 test('isComplete: 모든 낱말을 풀면 끝', () => {

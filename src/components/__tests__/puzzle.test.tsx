@@ -116,6 +116,15 @@ describe('초성 보기 찬스(하루 한 번)', () => {
     await fireEvent.changeText(screen.getByLabelText('낱말 입력'), '장화');
     await fireEvent.press(screen.getByText('확인'));
     expect(update).toHaveBeenCalledWith('cw-023', { solved: [0, 1, 2], revealed: {}, helps: 0 }, 5, { completed: true });
+    expect(screen.getByText('초성 보기 찬스를 하나 더 받았어요')).toBeTruthy();
+  });
+  test('덤 찬스가 3개 가득이면 다 풀어도 더 받지 못했다고 알린다', async () => {
+    const g = game({ 'cw-023': { solved: [0, 1], revealed: {}, helps: 0 } });
+    g.save = { ...g.save, chance: { day: null, bonus: 3 } };
+    await show(<Puzzle />, g);
+    await fireEvent.changeText(screen.getByLabelText('낱말 입력'), '장화');
+    await fireEvent.press(screen.getByText('확인'));
+    expect(screen.getByText('찬스는 3개까지 모을 수 있어요')).toBeTruthy();
   });
   test('초성을 본 낱말은 초성 모양으로 보이고, 맞히면 낱알 3개', async () => {
     const update = jest.fn();
