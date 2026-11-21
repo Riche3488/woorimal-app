@@ -29,7 +29,7 @@ export type Game = {
   startChallenge(): AppQuestion[]; // 오늘 날짜로 정해진 5문제
   complete(round: Round, mode?: RoundMode): void;
   answerCard(result: RoundResult): void; // 오늘의 낱말 확인 문제
-  updateCrossword(id: string, progress: CrosswordProgress, grains: number, usedChance?: boolean): void; // 퍼즐 진행·낱알·초성 찬스
+  updateCrossword(id: string, progress: CrosswordProgress, grains: number, opts?: { usedChance?: boolean; completed?: boolean }): void; // 퍼즐 진행·낱알·초성 찬스
   makePuzzle(level: MadeLevel): string | null; // 문제를 엮어 조합 퍼즐 한 판을 만들고 그 id를 돌려준다(못 만들면 null)
   updateSettings(patch: Partial<Settings>): void;
   resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
@@ -143,9 +143,9 @@ export function GameProvider({ children, fallback = null }: { children: ReactNod
     });
   }, []);
 
-  const updateCrossword = useCallback((id: string, progress: CrosswordProgress, grains: number, usedChance = false) => {
+  const updateCrossword = useCallback((id: string, progress: CrosswordProgress, grains: number, opts?: { usedChance?: boolean; completed?: boolean }) => {
     setSave(prev => {
-      const next = saveCrossword(prev, id, progress, grains, new Date(), usedChance);
+      const next = saveCrossword(prev, id, progress, grains, new Date(), opts);
       writeSave(next).catch(() => {});
       return next;
     });

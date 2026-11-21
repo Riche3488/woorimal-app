@@ -130,16 +130,20 @@ test('saveCrossword: 판 진행을 남기고 낱알을 더하며, 낱알을 받�
   expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now).streak.lastDay).toBeNull();
 });
 
-test('saveCrossword: 찬스를 쓰면 그날을 남긴다. 예전 저장에는 찬스 기록이 없다', async () => {
+test('saveCrossword: 찬스를 쓰면 줄이고, 판을 다 풀면 덤 찬스를 하나 더한다. 예전 저장은 찬스 기록을 채운다', async () => {
   const now = new Date(2026, 10, 21, 9);
   const progress = { solved: [], revealed: {}, helps: 1, chosung: [0] };
-  expect(defaultSave().chance).toEqual({ day: null });
-  expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now, true).chance).toEqual({ day: '2026-11-21' });
-  expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now).chance).toEqual({ day: null });
+  expect(defaultSave().chance).toEqual({ day: null, bonus: 0 });
+  const used = saveCrossword(defaultSave(), 'cw-023', progress, 0, now, { usedChance: true });
+  expect(used.chance).toEqual({ day: '2026-11-21', bonus: 0 });
+  expect(saveCrossword(defaultSave(), 'cw-023', progress, 0, now).chance).toEqual({ day: null, bonus: 0 });
+  expect(saveCrossword(used, 'cw-023', progress, 5, now, { completed: true }).chance).toEqual({ day: '2026-11-21', bonus: 1 });
   const old: Record<string, unknown> = { ...defaultSave() };
   delete old.chance;
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(old));
-  expect((await loadSave()).chance).toEqual({ day: null });
+  expect((await loadSave()).chance).toEqual({ day: null, bonus: 0 });
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify({ ...defaultSave(), chance: { day: '2026-11-21', bonus: -2 } }));
+  expect((await loadSave()).chance).toEqual({ day: '2026-11-21', bonus: 0 });
 });
 
 test('깨진 퍼즐 진행만 버리고 읽는다', async () => {

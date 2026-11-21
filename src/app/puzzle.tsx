@@ -1,5 +1,5 @@
 // 가로세로 퍼즐 한 판: 판을 작게 보여 주고, 고른 낱말의 힌트를 보며 낱말을 통째로 입력한다.
-// 이미 채워진 칸(엇갈리는 낱말)은 입력 모양(운○○)으로 알려 준다. 도움은 하루 한 번(모든 판 통틀어) 쓰는 초성 보기 찬스뿐이고, 빈칸을 초성으로(운ㄷㅎ) 보여 준다.
+// 이미 채워진 칸(엇갈리는 낱말)은 입력 모양(운○○)으로 알려 준다. 도움은 초성 보기 찬스뿐이고(하루 한 번 + 판을 다 풀 때마다 하나 더), 빈칸을 초성으로(운ㄷㅎ) 보여 준다.
 // 묶음의 판과 기기에서 만든 조합 퍼즐(save.madeCrosswords)을 같은 화면에서 푼다. 다 풀면 학습 안내를 보여 준다.
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -8,7 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Shake } from '../components/art';
 import {
-  boardChosung, boardLetters, buildGrid, cellKey, chanceLeft, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, showChosung, solveEntry,
+  boardChosung, boardLetters, buildGrid, cellKey, chanceCount, CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, entryCells, entryPattern, isComplete, showChosung, solveEntry,
 } from '../core/crossword';
 import { localDay } from '../core/growth';
 import { useGame } from '../state/GameProvider';
@@ -27,6 +27,7 @@ export default function Puzzle() {
   const [selected, setSelected] = useState(Math.max(0, firstOpen));
   const [text, setText] = useState('');
   const [feedback, setFeedback] = useState<{ ok: boolean; n: number; grains: number } | null>(null);
+  const [earned, setEarned] = useState(false);
 
   if (!board || !grid) {
     return (
@@ -60,16 +61,19 @@ export default function Puzzle() {
     setFeedback(f => ({ ok: r.correct, n: (f?.n ?? 0) + 1, grains: r.grains }));
     if (!r.correct) return;
     if (save.settings.haptics) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    updateCrossword(board.id, r.progress, r.grains);
+    // 이번에 판을 다 풀면 덤 찬스를 하나 받는다.
+    const completed = isComplete(board, r.progress);
+    if (completed) { updateCrossword(board.id, r.progress, r.grains, { completed: true }); setEarned(true); }
+    else updateCrossword(board.id, r.progress, r.grains);
     setText('');
     const nextOpen = board.entries.findIndex((_, i) => !r.progress.solved.includes(i));
     if (nextOpen >= 0) setSelected(nextOpen);
   };
-  const hasChance = chanceLeft(save.chance.day, localDay(new Date()));
+  const chances = chanceCount(save.chance, localDay(new Date()));
   const chosung = () => {
-    if (!hasChance) return;
+    if (chances < 1) return;
     const next = showChosung(board, progress, selected);
-    if (next !== progress) updateCrossword(board.id, next, 0, true);
+    if (next !== progress) updateCrossword(board.id, next, 0, { usedChance: true });
   };
   const chosungShown = progress.chosung?.includes(selected) ?? false;
   const pattern = entryPattern(board, selected, letters, progress);
@@ -107,6 +111,7 @@ export default function Puzzle() {
           <View style={s.doneCard}>
             <Text style={s.doneTitle}>다 풀었어요!</Text>
             <Text style={s.doneSub}>낱말 {board.entries.length}개 · 힌트 {progress.helps}번</Text>
+            {earned ? <Text style={s.earned}>초성 보기 찬스를 하나 더 받았어요</Text> : null}
             {board.intro ? <Text style={s.body}>{board.intro}</Text> : null}
             {board.notes.map(n => (
               <View key={n.title} style={s.note}>
@@ -134,8 +139,8 @@ export default function Puzzle() {
                       {feedback ? (feedback.ok ? `정답! +${feedback.grains}` : '다시 생각해 봐요') : ''}
                     </Text>
                     <View style={s.helps}>
-                      {chosungShown ? null : hasChance ? (
-                        <Pressable onPress={chosung} hitSlop={8} accessibilityRole="button" accessibilityHint="하루에 한 번만 쓸 수 있고, 맞히면 낱알이 3개로 줄어요"><Text style={s.help}>초성 보기 찬스</Text></Pressable>
+                      {chosungShown ? null : chances > 0 ? (
+                        <Pressable onPress={chosung} hitSlop={8} accessibilityRole="button" accessibilityHint="하루 한 번, 판을 다 풀 때마다 하나 더 생겨요. 맞히면 낱알이 3개로 줄어요"><Text style={s.help}>초성 보기 찬스{chances > 1 ? ` ×${chances}` : ''}</Text></Pressable>
                       ) : <Text style={s.helpOff}>찬스는 내일 다시</Text>}
                     </View>
                   </View>
@@ -198,6 +203,7 @@ const s = StyleSheet.create({
   doneCard: { ...paperCard, padding: 18, gap: 10, backgroundColor: C.goodSoft },
   doneTitle: { ...T.title, fontSize: 22, color: C.good },
   doneSub: { fontSize: 13, color: C.sub, fontWeight: '700' },
+  earned: { fontSize: 14, color: C.accent, fontWeight: '800' },
   body: { fontSize: 14, lineHeight: 21, color: C.ink },
   note: { gap: 4 },
   noteTitle: { fontSize: 14, fontWeight: '800', color: C.ink },

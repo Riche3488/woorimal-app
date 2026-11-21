@@ -90,15 +90,32 @@ describe('초성 보기 찬스(하루 한 번)', () => {
     const update = jest.fn();
     await show(<Puzzle />, game({}, update));
     await fireEvent.press(screen.getByText('초성 보기 찬스'));
-    expect(update).toHaveBeenCalledWith('cw-023', { solved: [], revealed: {}, helps: 1, chosung: [0] }, 0, true);
+    expect(update).toHaveBeenCalledWith('cw-023', { solved: [], revealed: {}, helps: 1, chosung: [0] }, 0, { usedChance: true });
   });
   test('오늘 찬스를 썼으면 누를 수 없고 내일 다시 쓸 수 있다고 알린다', async () => {
     const update = jest.fn();
     const g = game({}, update);
-    g.save = { ...g.save, chance: { day: localDay(new Date()) } };
+    g.save = { ...g.save, chance: { day: localDay(new Date()), bonus: 0 } };
     await show(<Puzzle />, g);
     expect(screen.queryByText('초성 보기 찬스')).toBeNull();
     expect(screen.getByText('찬스는 내일 다시')).toBeTruthy();
+  });
+  test('판을 다 풀어 모은 덤 찬스가 있으면 오늘 몫을 써도 쓸 수 있고, 남은 수를 보인다', async () => {
+    const g = game();
+    g.save = { ...g.save, chance: { day: localDay(new Date()), bonus: 1 } };
+    await show(<Puzzle />, g);
+    expect(screen.getByText('초성 보기 찬스')).toBeTruthy();
+    const g2 = game();
+    g2.save = { ...g2.save, chance: { day: null, bonus: 2 } };
+    await show(<Puzzle />, g2);
+    expect(screen.getByText('초성 보기 찬스 ×3')).toBeTruthy();
+  });
+  test('마지막 낱말을 맞혀 판을 다 풀면 찬스를 하나 더 받는다', async () => {
+    const update = jest.fn();
+    await show(<Puzzle />, game({ 'cw-023': { solved: [0, 1], revealed: {}, helps: 0 } }, update));
+    await fireEvent.changeText(screen.getByLabelText('낱말 입력'), '장화');
+    await fireEvent.press(screen.getByText('확인'));
+    expect(update).toHaveBeenCalledWith('cw-023', { solved: [0, 1, 2], revealed: {}, helps: 0 }, 5, { completed: true });
   });
   test('초성을 본 낱말은 초성 모양으로 보이고, 맞히면 낱알 3개', async () => {
     const update = jest.fn();

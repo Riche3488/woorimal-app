@@ -1,5 +1,5 @@
 import {
-  boardChosung, boardLetters, buildGrid, CROSSWORD_GRAINS, CROSSWORD_HINT_GRAINS, entryCells, entryPattern, isComplete, chanceLeft, showChosung, solveEntry, emptyCrossword,
+  boardChosung, boardLetters, buildGrid, CROSSWORD_GRAINS, CROSSWORD_HINT_GRAINS, entryCells, entryPattern, isComplete, chanceCount, earnChance, spendChance, showChosung, solveEntry, emptyCrossword,
 } from '../crossword';
 import type { AppCrossword } from '../types';
 
@@ -40,10 +40,19 @@ test('boardLetters·entryPattern: 푼 낱말과 보여 준 글자가 판에 채�
   expect(entryPattern(board, 2, letters)).toBe('장○');
 });
 
-test('chanceLeft: 초성 보기 찬스는 하루에 한 번(모든 판 통틀어)', () => {
-  expect(chanceLeft(null, '2026-11-21')).toBe(true);
-  expect(chanceLeft('2026-11-20', '2026-11-21')).toBe(true);
-  expect(chanceLeft('2026-11-21', '2026-11-21')).toBe(false);
+test('찬스: 하루 한 번 몫 + 판을 다 풀어 모은 덤. 쓸 때는 오늘 몫부터', () => {
+  const today = '2026-11-21';
+  let c = { day: null, bonus: 0 } as { day: string | null; bonus: number };
+  expect(chanceCount(c, today)).toBe(1);
+  c = spendChance(c, today);
+  expect(c).toEqual({ day: today, bonus: 0 });
+  expect(chanceCount(c, today)).toBe(0);
+  expect(spendChance(c, today)).toBe(c); // 남은 찬스 없음
+  c = earnChance(c);
+  expect(chanceCount(c, today)).toBe(1);
+  expect(chanceCount(c, '2026-11-22')).toBe(2); // 다음 날엔 오늘 몫이 다시 생긴다
+  c = spendChance(c, today);
+  expect(c).toEqual({ day: today, bonus: 0 });
 });
 
 test('isComplete: 모든 낱말을 풀면 끝', () => {
