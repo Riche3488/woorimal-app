@@ -43,7 +43,7 @@ export function Hearts({ hearts, max = 3 }: { hearts: number; max?: number }) {
 }
 
 // 남은 시간: 색이 낱알빛 → 주홍 → 홍으로 바뀌고, 4분의 1 아래에서 맥박친다.
-export function TimerBar({ ratio }: { ratio: number }) {
+export function TimerBar({ ratio,remainingSeconds }: { ratio: number;remainingSeconds?:number }) {
   const r = Math.max(0, Math.min(1, ratio));
   const reduce = useReducedMotion();
   const pulse = useSharedValue(1);
@@ -55,7 +55,7 @@ export function TimerBar({ ratio }: { ratio: number }) {
   const pulseStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
   const color = r > 0.5 ? C.grain : r > 0.25 ? C.accent : C.bad;
   return (
-    <View style={s.track} accessibilityLabel="남은 시간">
+    <View style={s.track} accessible accessibilityRole="progressbar" accessibilityLabel="남은 시간" accessibilityValue={{min:0,max:100,now:Math.round(r*100),text:remainingSeconds===undefined?`${Math.round(r*100)}% 남음`:`${remainingSeconds}초 남음`}}>
       <Animated.View style={[s.fill, { width: `${r * 100}%`, backgroundColor: color }, pulseStyle]} />
     </View>
   );
