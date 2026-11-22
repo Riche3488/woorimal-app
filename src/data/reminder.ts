@@ -1,12 +1,17 @@
-// 기기 알림 예약(expo-notifications). 서버 푸시 없음: 다음 한 번만 예약해 두고, 앱을 열거나 판을 마칠 때 다시 정한다.
-import * as Notifications from 'expo-notifications';
+// 기기 알림 예약(expo-notifications). 앱 소유의 반복 예약을 유지하며 서버 푸시는 쓰지 않는다.
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 import type { planReminder } from '../core/reminder';
 import { REMINDER_OWNER, REMINDER_TITLE, type ReminderPlan } from '../core/reminder';
 const CHANNEL = 'reminder';
 
+// Expo Go(SDK 58)에는 expo-notifications가 쓰는 네이티브 모듈(ExpoApplication)이 없어 불러오기만 해도 앱이 멈춘다.
+// Expo Go에서는 알림을 끄고(null), 개발 빌드·EAS 빌드에서만 쓴다.
+export const Notifications: typeof import('expo-notifications') | null =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient ? null : require('expo-notifications');
+
 // 앱을 보고 있을 때 온 알림도 보이게 한다.
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
@@ -15,7 +20,7 @@ Notifications.setNotificationHandler({
   })
 });
 async function ensureChannel() {
-  if (Platform.OS !== 'android') return;
+  if (!Notifications || Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHANNEL, {
     name: '학습 알림',
     importance: Notifications.AndroidImportance.DEFAULT
@@ -24,6 +29,7 @@ async function ensureChannel() {
 
 // 알림을 켤 때 한 번 묻는다. 거절하면 false.
 export async function requestReminderPermission(): Promise<boolean> {
+  if (!Notifications) return false;
   await ensureChannel();
   const now = await Notifications.getPermissionsAsync();
   if (now.granted) return true;
@@ -33,6 +39,7 @@ export async function requestReminderPermission(): Promise<boolean> {
 
 // plan이 null이면 예약을 모두 지운다(알림 끔).
 export async function scheduleReminder(plan: ReturnType<typeof planReminder> | null): Promise<void> {
+  if (!Notifications) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
   if (!plan) return;
   if (!(await Notifications.getPermissionsAsync()).granted) return;
@@ -51,6 +58,7 @@ export async function scheduleReminder(plan: ReturnType<typeof planReminder> | n
 }
 let scheduleTail: Promise<unknown> = Promise.resolve();
 export function replaceOwnedReminders(plans: ReminderPlan[]): Promise<void> {
+  if (!Notifications) return Promise.resolve();
   const task = scheduleTail.then(async () => {
     const allowed = (await Notifications.getPermissionsAsync()).granted;
     const wanted = allowed ? plans : [];
