@@ -9,6 +9,7 @@ import { APP_VERSION, TEST_MODE_OK } from '../data/build';
 import { requestReminderPermission } from '../data/reminder';
 import { useGame } from '../state/GameProvider';
 import { C, paperCard, T } from '../ui/theme';
+import { DiagnosticsSettings } from '../components/DiagnosticsSettings';
 
 // 묶음 정보 줄을 이만큼 연달아 누르면 테스트 모드 스위치가 나타난다(개발·preview 빌드만, src/data/build.ts).
 const UNLOCK_TAPS = 7;
@@ -78,6 +79,7 @@ export default function Settings() {
             </View>
           ) : null}
         </View>
+        <DiagnosticsSettings />
         {showTest ? (
           <>
             <View style={s.row}>
