@@ -1,6 +1,6 @@
 # 우리말 곳간 플레이 경험 개선 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 현재 요청은 계획 작성까지이며, 아래 작업은 아직 구현하지 않았다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. 구현·자동 검증과 남은 수동 검수의 상태는 [실행 기록](../../2026-11-22-player-experience-implementation.md)에 기록한다. 아래 체크리스트에는 기기·사용자·국어 검수까지 포함한 전체 인수 조건이 들어 있다.
 
 **Goal:** 중단해도 안심하고 이어 풀며, 짧은 학습의 성취가 곳간 성장과 다음 복습으로 이어지는 기존 게임 루프를 완성한다.
 

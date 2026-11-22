@@ -19,6 +19,8 @@ export function createSaveStore(initial: SaveData, write: (next: SaveData) => Pr
       tail = task.catch(() => {});
       return task;
     },
-    async flush() { await tail; },
+    async flush() {
+      await tail;
+    }
   };
 }

@@ -2,13 +2,20 @@
 import { normalizeAnswer } from './grading';
 import type { Progress } from './progress';
 import type { AppQuestion, QuestionType } from './types';
+import type { Discovery } from './activity';
+import type { SaveData } from '../data/save';
 
 // 정답이 낱말인 유형만(띄어쓰기·쓰임은 문장, 속담은 활용형 빈칸이라 뺀다).
 const WORD_TYPES = new Set<QuestionType>(['meaning', 'chosung', 'spelling']);
-
-export type CollectedWord = { word: string; explain: string; lastAt: number };
-
-export function wordCollection(p: Progress, questions: AppQuestion[]): { mastered: CollectedWord[]; known: number } {
+export type CollectedWord = {
+  word: string;
+  explain: string;
+  lastAt: number;
+};
+export function wordCollection(p: Progress, questions: AppQuestion[]): {
+  mastered: CollectedWord[];
+  known: number;
+} {
   const mastered = new Map<string, CollectedWord>();
   const known = new Set<string>();
   for (const q of questions) {
@@ -21,8 +28,39 @@ export function wordCollection(p: Progress, questions: AppQuestion[]): { mastere
     mastered.set(id, {
       word: prev?.word ?? q.answer,
       explain: prev?.explain || q.explain,
-      lastAt: Math.max(prev?.lastAt ?? 0, s.lastAt),
+      lastAt: Math.max(prev?.lastAt ?? 0, s.lastAt)
     });
   }
-  return { mastered: [...mastered.values()].sort((a, b) => b.lastAt - a.lastAt), known: known.size };
+  return {
+    mastered: [...mastered.values()].sort((a, b) => b.lastAt - a.lastAt),
+    known: known.size
+  };
+}
+export function discoveredWords(p: Progress, questions: AppQuestion[], extras: Record<string, Discovery> = {}): Discovery[] {
+  const words = {
+    ...extras
+  };
+  for (const q of questions) {
+    const s = p.stats[q.key];
+    if (!s?.correct || !WORD_TYPES.has(q.type)) continue;
+    const id = normalizeAnswer(q.answer),
+      old = words[id];
+    words[id] = {
+      word: q.answer,
+      at: old?.at ?? s.lastAt,
+      explain: old?.explain || q.explain,
+      ...(old?.masteredAt !== undefined ? {
+        masteredAt: old.masteredAt
+      } : s.mastered ? {
+        masteredAt: s.lastAt
+      } : {})
+    };
+  }
+  return Object.values(words).sort((a, b) => b.at - a.at);
+}
+export function seedDiscoveries(save: SaveData, questions: AppQuestion[]): SaveData {
+  return {
+    ...save,
+    discoveries: Object.fromEntries(discoveredWords(save.progress, questions, save.discoveries).map(w => [normalizeAnswer(w.word), w]))
+  };
 }
