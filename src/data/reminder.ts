@@ -6,9 +6,9 @@ import { REMINDER_OWNER, REMINDER_TITLE, type ReminderPlan } from '../core/remin
 const CHANNEL = 'reminder';
 
 // Expo Go(SDK 58)에는 expo-notifications가 쓰는 네이티브 모듈(ExpoApplication)이 없어 불러오기만 해도 앱이 멈춘다.
-// Expo Go에서는 알림을 끄고(null), 개발 빌드·EAS 빌드에서만 쓴다.
+// Expo Go와 웹에서는 알림을 끄고(null), 기기 개발 빌드·EAS 빌드에서만 쓴다.
 export const Notifications: typeof import('expo-notifications') | null =
-  Constants.executionEnvironment === ExecutionEnvironment.StoreClient ? null : require('expo-notifications');
+  Platform.OS === 'web' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient ? null : require('expo-notifications');
 
 // 앱을 보고 있을 때 온 알림도 보이게 한다.
 Notifications?.setNotificationHandler({

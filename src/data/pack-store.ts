@@ -1,19 +1,28 @@
 // 문제 묶음: 앱에 내장한 assets/pack.json과, 내려받아 둔 최신 묶음(문서 폴더) 중 하나를 쓴다.
-import { File, Paths } from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { APP_PACK_COMPAT, PACK_BASE_URL, acceptUpdate, choosePack, parsePack } from '../core/pack';
 import type { AppPack } from '../core/types';
 
 export type PackCache = { read(): Promise<string | null>; write(text: string): Promise<void> };
 
 type FetchFn = (url: string) => Promise<Response>;
+const WEB_CACHE_KEY = 'woorimal.pack.v1';
 
 // 임시 파일에 다 쓴 뒤 이름을 바꿔, 쓰다 끊겨도 기존 캐시가 깨지지 않게 한다.
 export const fileCache: PackCache = {
   async read() {
+    if (Platform.OS === 'web') return AsyncStorage.getItem(WEB_CACHE_KEY);
+    const { File, Paths }: typeof import('expo-file-system') = require('expo-file-system');
     const file = new File(Paths.document, 'pack.json');
     return file.exists ? file.text() : null;
   },
   async write(text) {
+    if (Platform.OS === 'web') {
+      await AsyncStorage.setItem(WEB_CACHE_KEY, text);
+      return;
+    }
+    const { File, Paths }: typeof import('expo-file-system') = require('expo-file-system');
     const tmp = new File(Paths.document, 'pack.json.tmp');
     if (tmp.exists) tmp.delete();
     tmp.create();
