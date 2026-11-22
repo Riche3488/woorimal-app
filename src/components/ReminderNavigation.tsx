@@ -13,8 +13,9 @@ export function ReminderNavigation() {
     const receive = (response: Notifications.NotificationResponse | null) => {
       if (!alive || !response) return;
       const request = response.notification.request;
-      if (request.content.data?.owner !== REMINDER_OWNER || handled.current === request.identifier) return;
-      handled.current = request.identifier;
+      const deliveryId = `${request.identifier}:${response.notification.date}`;
+      if (request.content.data?.owner !== REMINDER_OWNER || handled.current === deliveryId) return;
+      handled.current = deliveryId;
       router.push(reminderDestination(!!latest.current.save.activeSession, latest.current.counts.due));
       void Notifications.clearLastNotificationResponseAsync().catch(() => {});
     };

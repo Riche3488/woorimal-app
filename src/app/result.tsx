@@ -30,8 +30,11 @@ export default function Result() {
     toggleStar
   } = game;
   const [showWrong, setShowWrong] = useState(false);
-  const before = levelFor(previousSave?.totalGrains ?? 0);
-  const after = levelFor(save.totalGrains);
+  const outcome = save.lastOutcome;
+  const beforeGrains = outcome?.beforeGrains ?? previousSave?.totalGrains ?? 0;
+  const afterGrains = outcome?.afterGrains ?? save.totalGrains;
+  const before = levelFor(beforeGrains);
+  const after = levelFor(afterGrains);
   const leveledUp = after.level > before.level;
   const barnChanged = barnFor(after.level).name !== barnFor(before.level).name;
 
@@ -66,15 +69,16 @@ export default function Result() {
   const tomorrow = Object.values(save.progress.stats).filter(s => s.box > 0 && s.dueDay === addDays(today, 1)).length;
   const used = previousSave ? freezesUsed(previousSave.streak, today) : 0;
   const nudges = resultNudges({
-    beforeGrains: previousSave?.totalGrains ?? 0,
-    afterGrains: save.totalGrains,
+    beforeGrains,
+    afterGrains,
     roundGrains: lastRound.grains,
     todayRounds: todayRounds(save.daily, today),
     freezesUsed: used,
     freezeEarned: (save.streak.freezes ?? 0) > (previousSave?.streak.freezes ?? 0) - used,
     mastered: save.lastOutcome?.mastered ?? (previousSave ? newlyMastered(previousSave.progress, save.progress) : 0),
     learnedToday: daily.learned,
-    goalComplete: daily.complete,includeGoal:false
+    goalComplete: daily.complete,
+    includeGoal: false
   });
   const share = () => {
     Share.share({
@@ -124,8 +128,10 @@ export default function Result() {
           <Text style={s.xpText}>Lv.{after.level} · 다음 레벨까지 낱알 {after.need - after.into}개</Text>
         </Animated.View>
 
-        <View style={s.wrongCard}><Text style={s.wrongPrompt}>{daily.complete ? '오늘 목표 달성! 내일 또 만나요' : `오늘 학습 ${daily.learned}/5개`}</Text><Text style={{color:C.sub}}>내일 복습 {tomorrow}개</Text>
-          {save.decorations.unlocked.length > 0 && <Pressable accessibilityRole="button" onPress={() => router.push('/collection')}><Text style={s.link}>장식 확인 · {save.decorations.unlocked.map(id => DECORATIONS[id].name).join(', ')}</Text></Pressable>}
+        <View style={s.wrongCard}><Text style={s.wrongPrompt}>{daily.complete ? '오늘 목표 달성! 내일 또 만나요' : `오늘 학습 ${daily.learned}/5개`}</Text><Text style={{
+          color: C.sub
+        }}>내일 복습 {tomorrow}개</Text>
+          {save.decorations.unlocked.length > 0 && <Pressable accessibilityRole="button" onPress={() => router.push('/collection')}><Text style={s.link}>현재 장식 확인 · {save.decorations.unlocked.map(id => DECORATIONS[id].name).join(', ')}</Text></Pressable>}
         </View>
         {wrong.length > 0 && <Pressable onPress={() => setShowWrong(v => !v)} hitSlop={8}>
             <Text style={s.link}>{showWrong ? '틀린 문제 접기' : `틀린 문제 보기 (${wrong.length})`}</Text>

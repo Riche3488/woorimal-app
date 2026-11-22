@@ -181,11 +181,11 @@ export function reduceSession(s: SessionSnapshot, a: SessionAction): SessionSnap
     }
     return changed(n);
   }
-  if (s.phase !== 'question') return s;
-  if (a.kind === 'draft') return changed({
+  if (a.kind === 'draft' && (s.phase === 'question' || s.phase === 'retry')) return changed({
     ...s,
     draft: a.input
   });
+  if (s.phase !== 'question') return s;
   const q = s.round.questions[s.round.index];
   if (!q) return s;
   if (a.kind === 'answer' && canSubmit(q, a.input)) return changed(settle({
@@ -198,12 +198,47 @@ export function reduceSession(s: SessionSnapshot, a: SessionAction): SessionSnap
 
 // Persisted sessions are untrusted. A broken session must not take accumulated records with it.
 export function parseSession(raw: unknown): SessionSnapshot | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const s = raw as SessionSnapshot,
-    r = s.round,
-    p = s.policy;
-  const nonneg = (n: unknown) => typeof n === 'number' && Number.isFinite(n) && n >= 0;
-  const integer = (n: unknown) => nonneg(n) && Number.isSafeInteger(n);
-  if (s.schema !== 1 || typeof s.id !== 'string' || !s.id || !integer(s.revision) || !s.context || !['normal', 'review', 'challenge', 'starred', 'practice', 'quick'].includes(s.context.mode) || !/^\d{4}-\d{2}-\d{2}$/.test(s.context.day) || typeof s.context.packVersion !== 'string' || typeof s.context.rulesVersion !== 'string' || !p || typeof p.timed !== 'boolean' || typeof p.retry !== 'boolean' || !(p.hearts === null || integer(p.hearts)) || ![null, 3000].includes(p.autoAdvanceCorrectMs) || !['legacy-v1', 'learning-v2'].includes(p.rewardPolicy) || !r || !Array.isArray(r.questions) || !r.questions.length || r.questions.length > 100 || !r.questions.every(q => q && typeof q.key === 'string' && typeof q.answer === 'string' && typeof q.prompt === 'string' && typeof q.explain === 'string' && ['typed', 'choice', 'spacing'].includes(q.kind) && (q.kind !== 'choice' || Array.isArray(q.choices) && q.choices.includes(q.answer)) && (q.kind !== 'spacing' || Array.isArray(q.syllables) && Array.isArray(q.answers))) || !integer(r.index) || r.index > r.questions.length || !Array.isArray(r.results) || r.results.length !== r.index || !r.results.every((v, i) => v && v.key === r.questions[i].key && typeof v.correct === 'boolean' && typeof v.userAnswer === 'string' && nonneg(v.elapsedMs) && nonneg(v.grains)) || !(r.hearts === null || integer(r.hearts)) || !nonneg(r.grains) || !nonneg(r.startedAt) || !integer(r.streak) || !['question', 'feedback', 'retry', 'ready-to-finish'].includes(s.phase) || s.phase === 'question' && isOver(r) || s.phase !== 'question' && !r.results.length || !nonneg(s.questionElapsedMs) || !nonneg(s.feedbackElapsedMs) || typeof s.paused !== 'boolean' || typeof s.autoAdvanceCancelled !== 'boolean' || !integer(s.recordedCount) || s.recordedCount > r.results.length || !(typeof s.draft === 'string' || Array.isArray(s.draft) && s.draft.every(v => typeof v === 'boolean'))) return null;
+  const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+  const nonneg = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
+  const integer = (v: unknown): v is number => nonneg(v) && Number.isSafeInteger(v);
+  const strings = (v: unknown, min = 0): v is string[] => Array.isArray(v) && v.length >= min && v.every(x => typeof x === 'string');
+  const types = ['meaning', 'usage', 'spacing', 'spelling', 'proverb', 'chosung', 'broadcast'];
+  const question = (q: unknown): q is AppQuestion => {
+    if (!object(q) || typeof q.key !== 'string' || !q.key || typeof q.answer !== 'string' || typeof q.prompt !== 'string' || typeof q.explain !== 'string' || !types.includes(q.type as string) || !['kbs', 'original', 'blog', 'adapted'].includes(q.source as string) || typeof q.easy !== 'boolean') return false;
+    if (q.label !== undefined && typeof q.label !== 'string') return false;
+    if (q.level !== undefined && !['normal', 'hard'].includes(q.level as string)) return false;
+    if (q.synonyms !== undefined && !strings(q.synonyms)) return false;
+    if (q.hint !== undefined && (!object(q.hint) || typeof q.hint.chosung !== 'string' || !integer(q.hint.syllables))) return false;
+    for (const field of ['choices', 'answers', 'syllables']) if (q[field] !== undefined && !strings(q[field])) return false;
+    if (q.kind === 'choice') return strings(q.choices, 2) && q.choices.includes(q.answer);
+    if (q.kind === 'spacing') return strings(q.syllables, 1) && strings(q.answers, 1);
+    return q.kind === 'typed';
+  };
+  if (!object(raw)) return null;
+  const s = raw as unknown as SessionSnapshot;
+  const r = s.round,
+    p = s.policy,
+    c = s.context;
+  if (s.schema !== 1 || typeof s.id !== 'string' || !s.id || !integer(s.revision) || !object(c) || !['normal', 'review', 'challenge', 'starred', 'practice', 'quick'].includes(c.mode) || !/^\d{4}-\d{2}-\d{2}$/.test(c.day) || typeof c.packVersion !== 'string' || typeof c.rulesVersion !== 'string') return null;
+  if (c.practiceType !== undefined && !types.includes(c.practiceType)) return null;
+  if (c.count !== undefined && (!integer(c.count) || c.count < 1 || c.count > 10)) return null;
+  if (!object(p) || typeof p.timed !== 'boolean' || typeof p.retry !== 'boolean' || !(p.hearts === null || integer(p.hearts) && p.hearts > 0) || ![null, 3000].includes(p.autoAdvanceCorrectMs) || !['legacy-v1', 'learning-v2'].includes(p.rewardPolicy)) return null;
+  if (!object(r) || !Array.isArray(r.questions) || !r.questions.length || r.questions.length > 100 || !r.questions.every(question) || !integer(r.index) || r.index > r.questions.length || !Array.isArray(r.results) || r.results.length !== r.index) return null;
+  if (!r.results.every((v, i) => object(v) && v.key === r.questions[i].key && v.type === r.questions[i].type && (['correct', 'timedOut', 'gaveUp', 'synonymHit'] as const).every(f => typeof v[f] === 'boolean') && !(v.correct && (v.timedOut || v.gaveUp)) && typeof v.userAnswer === 'string' && nonneg(v.elapsedMs) && integer(v.grains) && (v.answeredAt === undefined || nonneg(v.answeredAt)))) return null;
+  if (!(r.hearts === null || integer(r.hearts)) || !integer(r.grains) || !nonneg(r.startedAt) || !integer(r.streak)) return null;
+  if (r.policy !== undefined && (!object(r.policy) || r.policy.timed !== p.timed)) return null;
+  const expectedHearts = p.hearts === null ? null : p.hearts - r.results.filter(v => !v.correct).length;
+  const trailingCorrect = [...r.results].reverse().findIndex(v => !v.correct);
+  if (r.hearts !== expectedHearts || r.grains !== r.results.reduce((n, v) => n + v.grains, 0) || r.streak !== (trailingCorrect < 0 ? r.results.length : trailingCorrect)) return null;
+  if (!['question', 'feedback', 'retry', 'ready-to-finish'].includes(s.phase) || !nonneg(s.questionElapsedMs) || !nonneg(s.feedbackElapsedMs) || typeof s.paused !== 'boolean' || typeof s.autoAdvanceCancelled !== 'boolean' || !integer(s.recordedCount) || s.recordedCount > r.results.length) return null;
+  if (s.masteredCount !== undefined && !integer(s.masteredCount) || s.retryCorrect !== undefined && typeof s.retryCorrect !== 'boolean') return null;
+  if (s.phase === 'question' ? isOver(r) : !r.results.length) return null;
+  if (s.phase === 'ready-to-finish' && (!isOver(r) || s.recordedCount !== r.results.length)) return null;
+  const last = r.results.at(-1);
+  if (s.phase === 'retry' && (!p.retry || last!.correct || last!.timedOut || last!.gaveUp)) return null;
+  const current = r.questions[s.phase === 'question' ? r.index : r.index - 1];
+  if (current.kind === 'spacing') {
+    if (!Array.isArray(s.draft) || s.draft.length !== current.syllables!.length - 1 || !s.draft.every(v => typeof v === 'boolean')) return null;
+  } else if (typeof s.draft !== 'string') return null;
   return s;
 }

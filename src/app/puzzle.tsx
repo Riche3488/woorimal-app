@@ -3,7 +3,7 @@
 // 묶음의 판과 기기에서 만든 조합 퍼즐(save.madeCrosswords)을 같은 화면에서 푼다. 다 풀면 학습 안내를 보여 준다.
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Shake } from '../components/art';
@@ -39,6 +39,24 @@ export default function Puzzle() {
     grains: number;
   } | null>(null);
   const [earned, setEarned] = useState<'got' | 'full' | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
+  const pendingSave = useRef<(() => Promise<void>) | null>(null);
+  const busy = useRef(false);
+  const runSave = async (operation: () => Promise<void>) => {
+    if (busy.current) return;
+    busy.current = true;
+    pendingSave.current = operation;
+    setSaveStatus('saving');
+    try {
+      await operation();
+      pendingSave.current = null;
+      setSaveStatus('idle');
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      busy.current = false;
+    }
+  };
   if (!board || !grid) {
     return <SafeAreaView style={s.screen}>
         <Pressable onPress={() => router.back()} style={s.headerPad}><Text style={s.back}>‹ 뒤로</Text></Pressable>
@@ -53,6 +71,7 @@ export default function Puzzle() {
   const cell = Math.floor(Math.min(width - GUTTER * 2, 420) / board.cols);
   const solvedHere = progress.solved.includes(selected);
   const choose = (i: number) => {
+    if (pendingSave.current) return;
     setSelected(i);
     setText('');
     setFeedback(null);
@@ -66,37 +85,50 @@ export default function Puzzle() {
     choose(next);
   };
   const submit = () => {
-    if (solvedHere || !text.trim()) return;
+    if (solvedHere || !text.trim() || pendingSave.current) return;
     const r = solveEntry(board, progress, selected, text);
-    const rewarded = save.rewardLedger[localDay(new Date())]?.[`cw:${normalizeAnswer(board.entries[selected].answer)}`];
-    setFeedback(f => ({
-      ok: r.correct,
-      n: (f?.n ?? 0) + 1,
-      grains: rewarded ? 0 : r.grains
-    }));
-    if (!r.correct) return;
-    if (save.settings.haptics) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (!r.correct) {
+      setFeedback(f => ({
+        ok: false,
+        n: (f?.n ?? 0) + 1,
+        grains: 0
+      }));
+      return;
+    }
+    const submittedAt = Date.now();
+    const rewarded = save.rewardLedger[localDay(new Date(submittedAt))]?.[`cw:${normalizeAnswer(board.entries[selected].answer)}`];
     // 이번에 판을 다 풀면 덤 찬스를 하나 받는다(가득이면 못 받는다).
     const completed = isComplete(board, r.progress);
-    if (completed) {
-      updateCrossword(board.id, r.progress, r.grains, {
-        completed: true,
-        entryIndex: selected
+    void runSave(async () => {
+      await updateCrossword(board.id, r.progress, r.grains, {
+        ...(completed ? {
+          completed: true
+        } : {}),
+        entryIndex: selected,
+        submittedAt
       });
-      setEarned(save.chance.bonus >= CHANCE_BONUS_MAX ? 'full' : 'got');
-    } else updateCrossword(board.id, r.progress, r.grains, {
-      entryIndex: selected
+      setFeedback(f => ({
+        ok: true,
+        n: (f?.n ?? 0) + 1,
+        grains: rewarded ? 0 : r.grains
+      }));
+      if (save.settings.haptics) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      if (completed) setEarned(save.chance.bonus >= CHANCE_BONUS_MAX ? 'full' : 'got');
+      setText('');
+      const nextOpen = board.entries.findIndex((_, i) => !r.progress.solved.includes(i));
+      if (nextOpen >= 0) setSelected(nextOpen);
     });
-    setText('');
-    const nextOpen = board.entries.findIndex((_, i) => !r.progress.solved.includes(i));
-    if (nextOpen >= 0) setSelected(nextOpen);
   };
   const chances = chanceCount(save.chance, localDay(new Date()));
   const chosung = () => {
-    if (chances < 1) return;
+    if (chances < 1 || pendingSave.current) return;
     const next = showChosung(board, progress, selected);
-    if (next !== progress) updateCrossword(board.id, next, 0, {
-      usedChance: true
+    const submittedAt = Date.now();
+    if (next !== progress) void runSave(async () => {
+      await updateCrossword(board.id, next, 0, {
+        usedChance: true,
+        submittedAt
+      });
     });
   };
   const chosungShown = progress.chosung?.includes(selected) ?? false;
@@ -112,6 +144,10 @@ export default function Puzzle() {
         <Text style={s.level}>{LEVEL_LABELS[board.level]}</Text>
       </View>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        {saveStatus === 'saving' && <Text>저장 중…</Text>}
+        {saveStatus === 'error' && <View accessibilityRole="alert"><Text>아직 저장하지 못했어요</Text><Pressable accessibilityRole="button" onPress={() => {
+          if (pendingSave.current) void runSave(pendingSave.current);
+        }}><Text>다시 저장</Text></Pressable></View>}
         <View style={[s.grid, {
         width: cell * board.cols,
         height: cell * board.rows
@@ -159,8 +195,8 @@ export default function Puzzle() {
               <Text style={s.pattern} accessibilityLabel={`채워진 글자 ${pattern}`}>{pattern}</Text>
               {solvedHere ? <Text style={s.solved}>✓ 푼 낱말이에요</Text> : <>
                   <View style={s.inputRow}>
-                    <TextInput value={text} onChangeText={setText} onSubmitEditing={submit} submitBehavior="submit" returnKeyType="done" autoCorrect={false} autoCapitalize="none" placeholder="낱말 입력" placeholderTextColor={C.faint} style={s.field} accessibilityLabel="낱말 입력" />
-                    <Pressable onPress={submit} style={s.submit} accessibilityRole="button"><Text style={s.submitText}>확인</Text></Pressable>
+                    <TextInput value={text} editable={saveStatus === 'idle'} onChangeText={setText} onSubmitEditing={submit} submitBehavior="submit" returnKeyType="done" autoCorrect={false} autoCapitalize="none" placeholder="낱말 입력" placeholderTextColor={C.faint} style={s.field} accessibilityLabel="낱말 입력" />
+                    <Pressable onPress={submit} disabled={saveStatus !== 'idle'} style={s.submit} accessibilityRole="button"><Text style={s.submitText}>확인</Text></Pressable>
                   </View>
                   <View style={s.inputFoot}>
                     <Text style={[s.feedback, {

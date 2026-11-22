@@ -255,7 +255,7 @@ export async function loadSaveResult(): Promise<SaveLoadResult> {
       kind: 'io-error'
     };
   }
-  if (!text) return {
+  if (text === null) return {
     kind: 'missing',
     save: defaultSave()
   };

@@ -53,12 +53,13 @@ export type Game = {
   toggleStar(key: string): void;
   startChallenge(): AppQuestion[]; // 오늘 날짜로 정해진 5문제
   complete(round: Round, mode?: RoundMode): void;
-  answerCard(result: RoundResult): void; // 오늘의 낱말 확인 문제
+  answerCard(result: RoundResult): Promise<SaveData>; // 저장 확인 뒤 피드백
   updateCrossword(id: string, progress: CrosswordProgress, grains: number, opts?: {
     usedChance?: boolean;
     completed?: boolean;
     entryIndex?: number;
-  }): void; // 퍼즐 진행·낱알·초성 찬스
+    submittedAt?: number;
+  }): Promise<SaveData>; // 퍼즐 진행·낱알·초성 찬스
   makePuzzle(level: MadeLevel): string | null; // 문제를 엮어 조합 퍼즐 한 판을 만들고 그 id를 돌려준다(못 만들면 null)
   updateSettings(patch: Partial<Settings>): void;
   resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
@@ -92,60 +93,93 @@ export function GameProvider({
   const [loadError, setLoadError] = useState(false);
   const [writeError, setWriteError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const failedWrite = useRef<{
-    retry: () => Promise<unknown>;
+  const pendingWrites = useRef<{
+    reduce: (latest: SaveData) => SaveData;
     key?: string;
-  } | null>(null);
+    saved?: SaveData;
+  }[]>([]);
+  const writeTail = useRef<Promise<unknown>>(Promise.resolve());
   const [reminderError, setReminderError] = useState(false),
     [reminderAttempt, setReminderAttempt] = useState(0);
-  const persist = useCallback(async (reduce: (latest: SaveData) => SaveData, key?: string): Promise<SaveData> => {
+  const applyWrite = useCallback(async (reduce: (latest: SaveData) => SaveData): Promise<SaveData> => {
     if (!store.current) throw new Error('저장소가 준비되지 않았어요');
-    try {
-      let before = store.current.current();
-      const next = await store.current.update(prev => {
-        before = prev;
-        return syncDecorations(reduce(prev));
-      });
-      setSave(next);
-      for (const [day, d] of Object.entries(next.activity)) {
-        const old = before.activity[day]?.contentIds.length ?? 0;
-        for (let i = old; i < d.contentIds.length; i++) void recordExperienceEvent({
-          id: `activity:${day}:${i}`,
-          at: d.lastAt ?? Date.now(),
-          kind: 'activity_credited'
-        }).catch(() => {});
-        if (dailyProgress(next.activity, day).complete && !dailyProgress(before.activity, day).complete) void recordExperienceEvent({
-          id: `mission:${day}`,
-          at: d.lastAt ?? Date.now(),
-          kind: 'mission_completed'
-        }).catch(() => {});
-      }
-      for (const id of next.decorations.unlocked) if (!before.decorations.unlocked.includes(id)) void recordExperienceEvent({
-        id: `unlock:${id}`,
-        at: Date.now(),
-        kind: 'reward_unlocked'
+    let before = store.current.current();
+    const next = await store.current.update(prev => {
+      before = prev;
+      return syncDecorations(reduce(prev));
+    });
+    setSave(next);
+    for (const [day, d] of Object.entries(next.activity)) {
+      const old = before.activity[day]?.contentIds.length ?? 0;
+      for (let i = old; i < d.contentIds.length; i++) void recordExperienceEvent({
+        id: `activity:${day}:${i}`,
+        at: d.lastAt ?? Date.now(),
+        kind: 'activity_credited'
       }).catch(() => {});
-      if (next.lastOutcome) {
-        setLastRound(next.lastOutcome.session.round);
-        setLastMode(next.lastOutcome.session.context.mode);
-        setLastPracticeType(next.lastOutcome.session.context.practiceType ?? null);
-        setPreviousSave({
-          ...next,
-          totalGrains: next.lastOutcome.beforeGrains
-        });
-      }
-      if (key !== undefined && failedWrite.current?.key === key) failedWrite.current = null;
-      setWriteError(!!failedWrite.current);
-      return next;
-    } catch (error) {
-      setWriteError(true);
-      if (!failedWrite.current) failedWrite.current = {
-        retry: () => persist(reduce, key),
-        key
-      };
-      throw error;
+      if (dailyProgress(next.activity, day).complete && !dailyProgress(before.activity, day).complete) void recordExperienceEvent({
+        id: `mission:${day}`,
+        at: d.lastAt ?? Date.now(),
+        kind: 'mission_completed'
+      }).catch(() => {});
     }
+    for (const id of next.decorations.unlocked) if (!before.decorations.unlocked.includes(id)) void recordExperienceEvent({
+      id: `unlock:${id}`,
+      at: Date.now(),
+      kind: 'reward_unlocked'
+    }).catch(() => {});
+    if (next.lastOutcome) {
+      setLastRound(next.lastOutcome.session.round);
+      setLastMode(next.lastOutcome.session.context.mode);
+      setLastPracticeType(next.lastOutcome.session.context.practiceType ?? null);
+      setPreviousSave({
+        ...next,
+        totalGrains: next.lastOutcome.beforeGrains
+      });
+    }
+    return next;
   }, []);
+  const drainWrites = useCallback(() => {
+    const run = writeTail.current.then(async () => {
+      try {
+        while (pendingWrites.current.length) {
+          const operation = pendingWrites.current[0];
+          let invalidOperation = false;
+          try {
+            operation.saved = await applyWrite(latest => {
+              try {
+                return operation.reduce(latest);
+              } catch (error) {
+                invalidOperation = true;
+                throw error;
+              }
+            });
+          } catch (error) {
+            // A rejected game action is not a disk operation to replay forever.
+            if (invalidOperation) pendingWrites.current.shift();
+            throw error;
+          }
+          pendingWrites.current.shift();
+        }
+        setWriteError(false);
+      } catch (error) {
+        setWriteError(pendingWrites.current.length > 0);
+        throw error;
+      }
+    });
+    writeTail.current = run.catch(() => {});
+    return run;
+  }, [applyWrite]);
+  const persist = useCallback(async (reduce: (latest: SaveData) => SaveData, key?: string): Promise<SaveData> => {
+    const operation = key === undefined ? undefined : pendingWrites.current.find(p => p.key === key);
+    const requested = operation ?? {
+      reduce,
+      key,
+      saved: undefined as SaveData | undefined
+    };
+    if (!operation) pendingWrites.current.push(requested);
+    await drainWrites();
+    return requested.saved ?? store.current!.current();
+  }, [drainWrites]);
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -304,7 +338,8 @@ export function GameProvider({
     },
     async finish(id: string) {
       const before = store.current!.current();
-      const next = await persist(d => commitSession(d, id, Date.now()), `finish:${id}`);
+      const completedAt = Date.now();
+      const next = await persist(d => commitSession(d, id, completedAt), `finish:${id}`);
       const out = next.lastOutcome;
       if (out?.session.id === id) {
         setPreviousSave(before);
@@ -335,7 +370,8 @@ export function GameProvider({
   // 함수형 갱신: 판 도중 누른 ⭐(toggleStar)가 판 결과 저장에 덮이지 않게 최신 저장 위에 쌓는다.
   const complete = useCallback((round: Round, mode: RoundMode = 'normal') => {
     const before = store.current?.current();
-    void persist(prev => finishRound(prev, round, new Date(), mode)).then(() => {
+    const submittedAt = new Date();
+    void persist(prev => finishRound(prev, round, submittedAt, mode)).then(() => {
       if (before) setPreviousSave(before);
     }).catch(() => {});
     setLastRound(round);
@@ -366,17 +402,20 @@ export function GameProvider({
     setPreviousSave(null);
   }, [persist]);
   const answerCard = useCallback((result: RoundResult) => {
-    void persist(prev => finishCard(prev, result, new Date(), pack?.cards?.find(c => c.question === result.key)?.word)).catch(() => {});
+    const submittedAt = new Date(result.answeredAt ?? Date.now());
+    return persist(prev => finishCard(prev, result, submittedAt, pack?.cards?.find(c => c.question === result.key)?.word), `card:${localDay(submittedAt)}:${result.key}`);
   }, [persist, pack]);
   const updateCrossword = useCallback((id: string, progress: CrosswordProgress, _grains: number, opts?: {
     usedChance?: boolean;
     completed?: boolean;
     entryIndex?: number;
+    submittedAt?: number;
   }) => {
-    void persist(prev => {
+    const submittedAt = new Date(opts?.submittedAt ?? Date.now());
+    return persist(prev => {
       const board = prev.madeCrosswords.find(b => b.id === id) ?? pack?.crosswords?.find(b => b.id === id);
-      return board ? finishCrosswordEntry(prev, board, progress, opts?.entryIndex ?? null, new Date()) : prev;
-    }).catch(() => {});
+      return board ? finishCrosswordEntry(prev, board, progress, opts?.entryIndex ?? null, submittedAt) : prev;
+    }, `crossword:${id}:${submittedAt.getTime()}:${JSON.stringify(progress)}`);
   }, [persist, pack]);
 
   // 앞서 만든 판의 낱말은 되도록 피해서 새 낱말로 엮는다.
@@ -468,9 +507,7 @@ export function GameProvider({
       padding: 16,
       backgroundColor: '#FFF0D0'
     }}><Text>저장하지 못했어요</Text><Pressable accessibilityRole="button" onPress={() => {
-        const pending = failedWrite.current;
-        failedWrite.current = null;
-        void pending?.retry().catch(() => {});
+        void drainWrites().catch(() => {});
       }}><Text>다시 시도</Text></Pressable></View>}
       {reminderError && <View accessibilityRole="alert" style={{
       padding: 12

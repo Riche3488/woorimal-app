@@ -1,5 +1,5 @@
 // 가로세로 퍼즐 목록·한 판 화면.
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Puzzle from '../../app/puzzle';
 import Puzzles from '../../app/puzzles';
 import { emptyCrossword, type CrosswordProgress } from '../../core/crossword';
@@ -139,6 +139,31 @@ test('목록: 주제·난이도·진행을 보이고 누르면 그 판으로', a
   });
 });
 describe('한 판', () => {
+  test('failed_final_entry_save_keeps_input_and_never_confirms_grains_or_bonus', async () => {
+    let reject!: (error: Error) => void;
+    const update = jest.fn().mockImplementationOnce(() => new Promise((_resolve, fail) => {
+      reject = fail;
+    })).mockResolvedValue(defaultSave());
+    await show(<Puzzle />, game({
+      'cw-023': {
+        solved: [0, 1],
+        revealed: {},
+        helps: 0
+      }
+    }, update));
+    await fireEvent.changeText(screen.getByLabelText('낱말 입력'), '장화');
+    await fireEvent.press(screen.getByText('확인'));
+    expect(screen.queryByText('초성 보기 찬스를 하나 더 받았어요')).toBeNull();
+    expect(screen.queryByText(/정답! \+/)).toBeNull();
+    expect(screen.getByLabelText('낱말 입력').props.value).toBe('장화');
+    await act(async () => {
+      reject(new Error('disk'));
+    });
+    expect(screen.queryByText('초성 보기 찬스를 하나 더 받았어요')).toBeNull();
+    await fireEvent.press(screen.getByText('다시 저장'));
+    expect(update.mock.calls[1]).toEqual(update.mock.calls[0]);
+    expect(screen.getByText('초성 보기 찬스를 하나 더 받았어요')).toBeTruthy();
+  });
   test('맞히면 진행과 낱알 5개를 저장한다', async () => {
     const update = jest.fn();
     await show(<Puzzle />, game({}, update));
@@ -150,7 +175,8 @@ describe('한 판', () => {
       revealed: {},
       helps: 0
     }, 5, {
-      entryIndex: 0
+      entryIndex: 0,
+      submittedAt: expect.any(Number)
     });
   });
   test('틀리면 저장하지 않고 다시 생각해 보라고 한다', async () => {
@@ -206,7 +232,8 @@ describe('초성 보기 찬스(하루 한 번)', () => {
       helps: 1,
       chosung: [0]
     }, 0, {
-      usedChance: true
+      usedChance: true,
+      submittedAt: expect.any(Number)
     });
   });
   test('오늘 찬스를 썼으면 누를 수 없고 내일 다시 쓸 수 있다고 알린다', async () => {
@@ -262,7 +289,8 @@ describe('초성 보기 찬스(하루 한 번)', () => {
       helps: 0
     }, 5, {
       completed: true,
-      entryIndex: 2
+      entryIndex: 2,
+      submittedAt: expect.any(Number)
     });
     expect(screen.getByText('초성 보기 찬스를 하나 더 받았어요')).toBeTruthy();
   });
@@ -306,7 +334,8 @@ describe('초성 보기 찬스(하루 한 번)', () => {
       helps: 1,
       chosung: [0]
     }, 3, {
-      entryIndex: 0
+      entryIndex: 0,
+      submittedAt: expect.any(Number)
     });
   });
 });
@@ -348,7 +377,8 @@ describe('조합 퍼즐', () => {
       revealed: {},
       helps: 0
     }, 5, {
-      entryIndex: 0
+      entryIndex: 0,
+      submittedAt: expect.any(Number)
     });
   });
 });

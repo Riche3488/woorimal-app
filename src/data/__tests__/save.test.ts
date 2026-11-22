@@ -6,6 +6,8 @@ import { loadSaveResult } from '../save';
 import { finishCrosswordEntry } from '../save';
 import { dailyProgress } from '../../core/activity';
 import { localDay } from '../../core/growth';
+import { createSession, policyFor, reduceSession } from '../../core/session';
+import { checkpointSession } from '../../core/session-commit';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 const q = (n: number): AppQuestion => ({
   key: `meaning:${n}`,
@@ -25,6 +27,96 @@ test('load distinguishes missing, invalid and io-error without overwriting raw d
   expect(await AsyncStorage.getItem(SAVE_KEY)).toBe('{broken');
   (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('disk'));
   expect((await loadSaveResult()).kind).toBe('io-error');
+});
+test('an_existing_empty_save_is_invalid_and_is_never_treated_as_first_install', async () => {
+  const writes = (AsyncStorage.setItem as jest.Mock).mock.calls.length;
+  (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('');
+  expect(await loadSaveResult()).toEqual({
+    kind: 'invalid',
+    raw: ''
+  });
+  expect((AsyncStorage.setItem as jest.Mock).mock.calls.length).toBe(writes);
+});
+test.each(['choice-object', 'hint-object', 'spacing-object', 'result-flags', 'partial-ready', 'unrecorded-ready'])('quarantines_%s_while_preserving_accumulated_records', async corruption => {
+  const session = createSession([q(1), q(2)], {
+    mode: 'review',
+    day: '2026-11-22',
+    packVersion: 'p',
+    rulesVersion: '1'
+  }, 100, 'corrupt', policyFor('review'));
+  const saved = checkpointSession({
+    ...defaultSave(),
+    totalGrains: 777,
+    activeSession: session
+  }, reduceSession(session, {
+    kind: 'answer',
+    input: '답1',
+    answeredAt: 200
+  }));
+  const broken = JSON.parse(JSON.stringify(saved.activeSession));
+  if (corruption === 'choice-object') {
+    broken.round.questions[0].kind = 'choice';
+    broken.round.questions[0].choices = ['답1', {}];
+  }
+  if (corruption === 'hint-object') broken.round.questions[0].hint = {
+    chosung: {},
+    syllables: 2
+  };
+  if (corruption === 'spacing-object') {
+    broken.round.questions[0].kind = 'spacing';
+    broken.round.questions[0].syllables = [{}, '1'];
+    broken.round.questions[0].answers = ['답1'];
+    broken.draft = [false];
+  }
+  if (corruption === 'result-flags') broken.round.results[0].timedOut = {};
+  if (corruption === 'partial-ready') broken.phase = 'ready-to-finish';
+  if (corruption === 'unrecorded-ready') {
+    broken.round.questions = [broken.round.questions[0]];
+    broken.phase = 'ready-to-finish';
+    broken.recordedCount = 0;
+  }
+  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify({
+    ...saved,
+    activeSession: broken
+  }));
+  const loaded = await loadSaveResult();
+  expect(loaded.kind).toBe('loaded');
+  if (!('save' in loaded)) throw new Error('expected accumulated records');
+  expect(loaded.save.totalGrains).toBe(777);
+  expect(loaded.save.progress.stats['meaning:1'].correct).toBe(1);
+  expect(loaded.save.activeSession).toBeNull();
+  expect(loaded.save.quarantinedSession).toEqual(broken);
+});
+test('corrected_retry_draft_survives_a_saved_restart_without_replacing_first_wrong', async () => {
+  const session = createSession([q(1)], {
+    mode: 'review',
+    day: '2026-11-22',
+    packVersion: 'p',
+    rulesVersion: '1'
+  }, 100, 'retry', policyFor('review'));
+  const wrong = reduceSession(session, {
+    kind: 'answer',
+    input: '틀림',
+    answeredAt: 200
+  });
+  const corrected = reduceSession(wrong, {
+    kind: 'draft',
+    input: '답1'
+  });
+  await writeSave(checkpointSession({
+    ...defaultSave(),
+    activeSession: session
+  }, corrected));
+  const loaded = await loadSave();
+  expect(loaded.activeSession).toMatchObject({
+    phase: 'retry',
+    draft: '답1',
+    paused: true
+  });
+  expect(loaded.activeSession!.round.results[0]).toMatchObject({
+    correct: false,
+    userAnswer: '틀림'
+  });
 });
 test('저장이 없으면 기본값', async () => {
   await expect(loadSave()).resolves.toEqual(defaultSave());
