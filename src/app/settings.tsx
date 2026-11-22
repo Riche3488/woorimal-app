@@ -79,6 +79,7 @@ export default function Settings() {
             </View>
           ) : null}
         </View>
+        <View style={s.row}><View style={{flexShrink:1}}><Text style={s.label}>정답 자동 넘김</Text><Text style={s.desc}>정답은 3초 뒤 넘어가요. 해설을 펼치거나 별을 누르면 멈춰요.</Text></View><Switch accessibilityLabel="정답 자동 넘김" value={save.settings.autoAdvanceCorrect??false} onValueChange={autoAdvanceCorrect=>updateSettings({autoAdvanceCorrect})}/></View>
         <DiagnosticsSettings />
         {showTest ? (
           <>

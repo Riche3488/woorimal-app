@@ -32,7 +32,7 @@ test('테스트 모드의 오답 제출과 시간 초과', async () => {
   await render(<PlayScreen questions={qs} onFinish={jest.fn()} testMode />);
   await fireEvent.press(screen.getByText('오답 제출'));
   expect(screen.getByText('아쉬워요')).toBeTruthy();
-  await fireEvent.press(screen.getByText('눌러서 다음 문제'));
+  await fireEvent.press(screen.getByText('다음 문제'));
   await fireEvent.press(screen.getByText('시간 초과로 넘기기'));
   expect(screen.getByText('시간 초과')).toBeTruthy();
   expect(screen.getByText('정답: 포옹')).toBeTruthy();

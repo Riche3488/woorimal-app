@@ -1,64 +1,45 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+﻿import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlayScreen } from '../components/PlayScreen';
-import { CHALLENGE_SIZE } from '../core/challenge';
-import { localDay } from '../core/growth';
-import type { Round } from '../core/round';
 import { reportUrl } from '../core/report';
+import type { RoundMode } from '../core/session';
 import type { AppQuestion, QuestionType } from '../core/types';
 import { APP_VERSION, TEST_MODE_OK } from '../data/build';
-import type { RoundMode } from '../data/save';
 import { useGame } from '../state/GameProvider';
-import { Image } from 'expo-image';
-import { ART } from '../../assets/art';
 import { C } from '../ui/theme';
-
+const MODES=['normal','review','starred','practice','challenge','quick'];
 export default function Play() {
-  const { mode, type } = useLocalSearchParams<{ mode?: string; type?: string }>();
-  const game = useGame();
-  const challenge = mode === 'challenge';
-  const doneToday = challenge && game.save.challenge.day === localDay(new Date());
-  const roundMode: RoundMode = mode === 'challenge' || mode === 'review' || mode === 'starred' || (mode === 'practice' && type) ? mode : 'normal';
-  // 화면이 열릴 때 한 번만 문제를 뽑는다.
-  const [questions] = useState(() => {
-    if (doneToday) return [];
-    switch (roundMode) {
-      case 'challenge': return game.startChallenge();
-      case 'review': return game.startReview();
-      case 'starred': return game.startStarred();
-      case 'practice': return game.startPractice(type as QuestionType);
-      default: return game.startNormal();
-    }
-  });
-
-  const finish = (round: Round) => {
-    game.complete(round, roundMode);
-    router.replace('/result');
-  };
-
-  // 웹 제보 화면을 브라우저로 연다(앱은 서버에 쓰지 않는다). 판은 그대로 이어서 풀 수 있다.
-  const report = (q: AppQuestion) => {
-    Linking.openURL(reportUrl(q, game.pack.version, APP_VERSION)).catch(() => Alert.alert('신고 화면을 열 수 없어요', '인터넷 연결을 확인해 주세요.'));
-  };
-
-  return (
-    <SafeAreaView style={s.screen}>
-      {questions.length ? (
-        <PlayScreen questions={questions} onFinish={finish} haptics={game.save.settings.haptics} testMode={TEST_MODE_OK && game.save.settings.testMode}
-          hearts={challenge ? CHALLENGE_SIZE : undefined} showHearts={!challenge}
-          starred={key => !!game.save.progress.stats[key]?.starred} onToggleStar={game.toggleStar} onReport={report} />
-      ) : (
-        <View style={s.empty}><Image source={ART.squirrel.think} style={s.emptyArt} contentFit="contain" accessible={false} /><Text style={s.emptyText}>{doneToday ? '오늘의 문제는 이미 풀었어요. 내일 새 문제가 나와요' : '풀 문제가 없어요'}</Text></View>
-      )}
-    </SafeAreaView>
-  );
+  const {mode='normal',type}=useLocalSearchParams<{mode?:string;type?:string}>();
+  const game=useGame();
+  const started=useRef(false);
+  const [accepted,setAccepted]=useState(mode==='resume');
+  const [message,setMessage]=useState('문제를 준비하고 있어요');
+  const session=game.save.activeSession;
+  const playingId=useRef<string|null>(null);
+  if(session && accepted)playingId.current=session.id;
+  useEffect(()=>{
+    if(!session && playingId.current && game.save.lastOutcome?.session.id===playingId.current)router.replace('/result');
+  },[session,game.save.lastOutcome]);
+  useEffect(()=>{
+    if (started.current || session || mode==='resume' || !game.sessions) return;
+    started.current=true;
+    const validType=['meaning','usage','spacing','spelling','proverb','chosung','broadcast'].includes(type??'')?type as QuestionType:undefined;
+    const roundMode=(MODES.includes(mode) && (mode!=='practice' || validType)?mode:'normal') as RoundMode;
+    void game.sessions.begin(roundMode,validType).then(()=>setAccepted(true)).catch(error=>setMessage(error.message));
+  },[game.sessions,session,mode,type]);
+  const home=()=>router.replace('/');
+  const report=(q:AppQuestion)=>{void Linking.openURL(reportUrl(q,session?.context.packVersion??game.pack.version,APP_VERSION)).catch(()=>Alert.alert('신고 화면을 열 수 없어요','인터넷 연결을 확인해 주세요.'));};
+  return <SafeAreaView style={{flex:1,backgroundColor:C.bg}}>
+    {session && accepted?<PlayScreen key={session.id} questions={session.round.questions} initialSession={session}
+      onCheckpoint={s=>game.sessions!.checkpoint(s)} onFinish={async()=>{await game.sessions!.finish(session.id);}}
+      onExit={home} haptics={game.save.settings.haptics} testMode={TEST_MODE_OK && game.save.settings.testMode}
+      showHearts={session.context.mode!=='challenge'} starred={key=>!!game.save.progress.stats[key]?.starred}
+      onToggleStar={game.toggleStar} onReport={report}/>:<View style={{flex:1,padding:24,justifyContent:'center',gap:24}}>
+      <Text style={{fontSize:18,color:C.ink}}>{session?'진행 중인 판이 있어요. 이어 하거나 홈에서 끝낼 수 있어요.':mode==='resume'?'진행 중인 판이 없어요':message}</Text>
+      {session && <Pressable accessibilityRole="button" onPress={()=>setAccepted(true)}><Text style={{color:C.accent,fontSize:18}}>이어서 풀기</Text></Pressable>}
+      <Pressable accessibilityRole="button" onPress={home}><Text style={{color:C.accent,fontSize:18}}>홈으로</Text></Pressable>
+    </View>}
+  </SafeAreaView>;
 }
-
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24 },
-  emptyArt: { width: 160, height: 160 },
-  emptyText: { color: C.sub, fontSize: 16, fontWeight: '600', textAlign: 'center' },
-});

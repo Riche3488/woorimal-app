@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadSave, writeSave, finishRound, finishCard, saveCrossword, addMadeCrossword, defaultSave, toggleStarSave, MADE_KEEP, SAVE_KEY } from '../save';
 import { startRound, answer } from '../../core/round';
 import type { AppQuestion } from '../../core/types';
+import { loadSaveResult } from '../save';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -11,6 +12,15 @@ const q = (n: number): AppQuestion => ({
 });
 
 beforeEach(() => AsyncStorage.clear());
+
+test('load distinguishes missing, invalid and io-error without overwriting raw data', async () => {
+  expect((await loadSaveResult()).kind).toBe('missing');
+  await AsyncStorage.setItem(SAVE_KEY, '{broken');
+  expect((await loadSaveResult()).kind).toBe('invalid');
+  expect(await AsyncStorage.getItem(SAVE_KEY)).toBe('{broken');
+  (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('disk'));
+  expect((await loadSaveResult()).kind).toBe('io-error');
+});
 
 test('저장이 없으면 기본값', async () => {
   await expect(loadSave()).resolves.toEqual(defaultSave());

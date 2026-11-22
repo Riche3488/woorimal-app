@@ -5,6 +5,19 @@ const layout = (width: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width,
 const tapAt = (locationX: number) => ({ nativeEvent: { locationX, locationY: 20 } });
 
 describe('SpacingAnswer', () => {
+  test('undo and reset restore only edited gaps, with an accessible selected-position control', async () => {
+    const onSubmit=jest.fn();
+    await render(<SpacingAnswer syllables={['가','나','다']} onSubmit={onSubmit} disabled={false}/>);
+    await fireEvent.press(screen.getByLabelText('1번째 글자 뒤 띄우기'));
+    await fireEvent.press(screen.getByLabelText('2번째 글자 뒤 띄우기'));
+    await fireEvent.press(screen.getByText('되돌리기'));
+    await fireEvent.press(screen.getByText('확인'));
+    expect(onSubmit).toHaveBeenLastCalledWith([true,false]);
+    await fireEvent.press(screen.getByText('처음으로'));
+    await fireEvent.press(screen.getByText('확인'));
+    expect(onSubmit).toHaveBeenLastCalledWith([false,false]);
+    expect(screen.getByText('선택한 자리 바꾸기')).toBeTruthy();
+  });
   test('처음엔 모든 자리가 붙어 있고, 누른 자리만 띄워서 낸다', async () => {
     const onSubmit = jest.fn();
     await render(<SpacingAnswer syllables={['몇', '날', '며', '칠']} onSubmit={onSubmit} disabled={false} />);

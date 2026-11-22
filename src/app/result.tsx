@@ -12,12 +12,14 @@ import { barnFor, currentStreak, freezesUsed, levelFor, localDay } from '../core
 import { sourceNote, TYPE_LABELS } from '../core/labels';
 import { newlyMastered } from '../core/progress';
 import { useGame } from '../state/GameProvider';
+import { resultAction } from '../core/result-actions';
 import { DUR, EASE, enterUp } from '../ui/motion';
 import { goHome } from '../ui/navigation';
 import { C, elevation, paperCard, R, T } from '../ui/theme';
 
 export default function Result() {
-  const { lastRound, lastMode, lastPracticeType, previousSave, save, toggleStar } = useGame();
+  const game=useGame();
+  const { lastRound, lastMode, lastPracticeType, previousSave, save, toggleStar } = game;
   const [showWrong, setShowWrong] = useState(false);
   const before = levelFor(previousSave?.totalGrains ?? 0);
   const after = levelFor(save.totalGrains);
@@ -39,7 +41,9 @@ export default function Result() {
 
   const total = lastRound.results.length;
   const correct = lastRound.results.filter(r => r.correct).length;
-  const today = localDay(new Date());
+  const today = save.lastOutcome?.session.context.day ?? localDay(new Date());
+  const context=save.lastOutcome?.session.context ?? {mode:lastMode,practiceType:lastPracticeType??undefined,day:today,packVersion:game.pack.version,rulesVersion:'legacy-v1'};
+  const action=resultAction(context,game.counts);
   const used = previousSave ? freezesUsed(previousSave.streak, today) : 0;
   const nudges = resultNudges({
     beforeGrains: previousSave?.totalGrains ?? 0,
@@ -51,7 +55,7 @@ export default function Result() {
     mastered: previousSave ? newlyMastered(previousSave.progress, save.progress) : 0,
   });
   const share = () => {
-    Share.share({ message: shareText({ day: today, marks: save.challenge.marks, streak: currentStreak(save.streak, today) }) }).catch(() => {});
+    Share.share({ message: shareText({ day: today, marks:save.challengeHistory[today]??save.challenge.marks, streak: currentStreak(save.streak, today) })+`\n묶음 ${context.packVersion} · 규칙 ${context.rulesVersion}` }).catch(() => {});
   };
   const rate = total ? correct / total : 0;
   const pose: SquirrelPose = rate >= 0.8 ? 'cheer' : rate < 0.4 ? 'think' : 'idle';
@@ -71,10 +75,7 @@ export default function Result() {
         </Animated.Text>
         {lastMode === 'challenge' && (
           <View style={s.share}>
-            <Text style={s.marks} accessibilityLabel="오늘의 문제 결과">{marksToEmoji(save.challenge.marks)}</Text>
-            <Pressable onPress={share} style={({ pressed }) => [s.shareBtn, pressed && s.pressed]} accessibilityRole="button">
-              <Text style={s.shareText}>결과 공유</Text>
-            </Pressable>
+            <Text style={s.marks} accessibilityLabel="오늘의 문제 결과">{marksToEmoji(save.challengeHistory[today]??save.challenge.marks)}</Text>
           </View>
         )}
 
@@ -136,9 +137,9 @@ export default function Result() {
         </View>
       )}
       <View style={s.actions}>
-        <PressableScale onPress={() => router.replace({ pathname: '/play', params: { mode: 'normal' } })}
+        <PressableScale onPress={() => action.target==='share'?share():action.target==='home'?goHome():router.replace({pathname:'/play',params:{mode:action.mode,type:action.practiceType}})}
           haptic={save.settings.haptics} style={s.primary} accessibilityRole="button">
-          <Text style={s.primaryText}>다음 판</Text>
+          <Text style={s.primaryText}>{action.label}</Text>
         </PressableScale>
         <PressableScale onPress={goHome} style={s.secondary} accessibilityRole="button">
           <Text style={s.secondaryText}>홈</Text>

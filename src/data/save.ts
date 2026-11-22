@@ -8,18 +8,22 @@ import { validCrossword } from '../core/pack';
 import type { AppCrossword } from '../core/types';
 import { emptyProgress, normalizeStat, recordResults, toggleStar, type Progress } from '../core/progress';
 import type { Round, RoundResult } from '../core/round';
+import { parseSession, type SessionSnapshot } from '../core/session';
+import type { SessionOutcome } from '../core/session-commit';
 
 export const SAVE_KEY = 'woorimal.save.v1';
 
 // choiceMode: 직접 입력하는 문제를 보기 4개 고르기로 푼다(src/core/choices.ts). 오늘의 문제는 모두에게 같아야 하므로 바꾸지 않는다.
 // reminder·reminderHour: 하루 한 번 기기 알림(src/core/reminder.ts, src/data/reminder.ts).
-export type Settings = { haptics: boolean; sound: boolean; testMode: boolean; choiceMode: boolean; reminder: boolean; reminderHour: number };
+export type Settings = { haptics: boolean; sound: boolean; testMode: boolean; choiceMode: boolean; reminder: boolean; reminderHour: number; autoAdvanceCorrect?: boolean };
 // card.day: 오늘의 낱말 확인 문제를 푼 날. chance: 퍼즐 초성 보기 찬스(src/core/crossword.ts ChanceState). crosswords: 퍼즐 판 id별 진행.
 // madeCrosswords: 기기에서 문제를 엮어 만든 조합 퍼즐 판(src/core/crossword-make.ts). 새 판이 앞.
-export type SaveData = { schema: 1; totalGrains: number; rounds: number; streak: Streak; daily: Daily; challenge: ChallengeRecord; card: { day: string | null }; chance: ChanceState; crosswords: Record<string, CrosswordProgress>; madeCrosswords: AppCrossword[]; progress: Progress; settings: Settings };
+export type SaveData = { schema: 1; totalGrains: number; rounds: number; streak: Streak; daily: Daily; challenge: ChallengeRecord; card: { day: string | null }; chance: ChanceState; crosswords: Record<string, CrosswordProgress>; madeCrosswords: AppCrossword[]; progress: Progress; settings: Settings;
+  activeSession: SessionSnapshot | null; lastOutcome: SessionOutcome | null; sessionReceipts: string[]; challengeHistory: Record<string,string>; quarantinedSession?: unknown;
+};
 
 export function defaultSave(): SaveData {
-  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null, freezes: 0 }, daily: { day: null, rounds: 0 }, challenge: { day: null, marks: '' }, card: { day: null }, chance: { day: null, bonus: 0 }, crosswords: {}, madeCrosswords: [], progress: emptyProgress(), settings: { haptics: true, sound: true, testMode: false, choiceMode: false, reminder: false, reminderHour: 19 } };
+  return { schema: 1, totalGrains: 0, rounds: 0, streak: { days: 0, lastDay: null, freezes: 0 }, daily: { day: null, rounds: 0 }, challenge: { day: null, marks: '' }, card: { day: null }, chance: { day: null, bonus: 0 }, crosswords: {}, madeCrosswords: [], progress: emptyProgress(), settings: { haptics: true, sound: true, testMode: false, choiceMode: true, reminder: false, reminderHour: 19 },activeSession:null,lastOutcome:null,sessionReceipts:[],challengeHistory:{} };
 }
 
 // 퍼즐 진행 저장. 낱말을 직접 맞혀 낱알을 받으면 오늘 공부한 날로 연속 기록에 센다(판 수·하루 목표는 그대로).
@@ -71,12 +75,14 @@ export function finishCard(d: SaveData, result: RoundResult, now: Date): SaveDat
   return { ...d, card: { day: localDay(now) }, progress: recordResults(d.progress, [result], now.getTime()) };
 }
 
-export async function loadSave(): Promise<SaveData> {
+export type SaveLoadResult = { kind: 'missing' | 'loaded'; save: SaveData } | { kind: 'invalid'; raw: string } | { kind: 'io-error' };
+export async function loadSaveResult(): Promise<SaveLoadResult> {
+  let text: string | null;
+  try { text = await AsyncStorage.getItem(SAVE_KEY); } catch { return { kind: 'io-error' }; }
+  if (!text) return { kind: 'missing', save: defaultSave() };
   try {
-    const text = await AsyncStorage.getItem(SAVE_KEY);
-    if (!text) return defaultSave();
     const data = JSON.parse(text);
-    if (data?.schema !== 1 || typeof data.totalGrains !== 'number' || !data.progress?.stats) return defaultSave();
+    if (data?.schema !== 1 || !Number.isFinite(data.totalGrains) || data.totalGrains < 0 || !data.progress?.stats || typeof data.progress.stats !== 'object') return { kind: 'invalid', raw: text };
     const base = defaultSave();
     // 깨진 항목은 그 문제 기록만 버린다(저장 전체를 잃지 않게).
     const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : 0);
@@ -87,17 +93,32 @@ export async function loadSave(): Promise<SaveData> {
         return [k, normalizeStat({ ...o, seen: num(o.seen), correct: num(o.correct), lastAt: num(o.lastAt) })];
       }));
     const progress: Progress = { triesByType: data.progress.triesByType ?? {}, stats };
-    return { ...base, ...data, progress, streak: { ...base.streak, ...data.streak }, daily: { ...base.daily, ...data.daily }, challenge: { ...base.challenge, ...data.challenge }, card: { ...base.card, ...data.card }, chance: readChance(data.chance), crosswords: readCrosswords(data.crosswords), madeCrosswords: Array.isArray(data.madeCrosswords) ? data.madeCrosswords.filter(validCrossword) : [], settings: { ...base.settings, ...data.settings } };
+    const active = parseSession(data.activeSession);
+    const outcome = data.lastOutcome;
+    const validOutcome = outcome && parseSession(outcome.session) && Number.isFinite(outcome.completedAt) && Number.isFinite(outcome.beforeGrains) && Number.isFinite(outcome.afterGrains);
+    return { kind: 'loaded', save: { ...base, ...data, progress, streak: { ...base.streak, ...data.streak }, daily: { ...base.daily, ...data.daily }, challenge: { ...base.challenge, ...data.challenge }, card: { ...base.card, ...data.card }, chance: readChance(data.chance), crosswords: readCrosswords(data.crosswords), madeCrosswords: Array.isArray(data.madeCrosswords) ? data.madeCrosswords.filter(validCrossword) : [], settings: { ...base.settings, ...data.settings, choiceMode: data.settings?.choiceMode === true },
+      activeSession:active ? {...active,paused:true} : null, lastOutcome:validOutcome ? outcome : null,
+      sessionReceipts:Array.isArray(data.sessionReceipts) ? data.sessionReceipts.filter((id: unknown) => typeof id === 'string').slice(-30) : [],
+      challengeHistory:data.challengeHistory && typeof data.challengeHistory === 'object' ? Object.fromEntries(Object.entries(data.challengeHistory).filter(([k,v]) => /^\d{4}-\d{2}-\d{2}$/.test(k) && typeof v === 'string' && /^[oxt]*$/.test(v))) : {},
+      ...(data.activeSession && !active ? {quarantinedSession:data.activeSession} : {}),
+    } };
   } catch {
-    return defaultSave();
+    return { kind: 'invalid', raw: text };
   }
+}
+
+// Compatibility for pure data consumers. The application uses loadSaveResult and blocks on errors.
+export async function loadSave(): Promise<SaveData> {
+  const result = await loadSaveResult();
+  return 'save' in result ? result.save : defaultSave();
 }
 
 export async function writeSave(d: SaveData): Promise<void> {
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(d));
 }
 
-export type RoundMode = 'normal' | 'review' | 'challenge' | 'starred' | 'practice';
+export type { RoundMode } from '../core/session';
+import type { RoundMode } from '../core/session';
 
 export function toggleStarSave(d: SaveData, key: string): SaveData {
   return { ...d, progress: toggleStar(d.progress, key) };

@@ -13,7 +13,7 @@ export function ErrorScreen({ retry }: Props) {
   return (
     <View style={s.screen}>
       <Text style={s.title}>문제가 생겼어요</Text>
-      <Text style={s.body}>풀던 기록은 그대로 남아 있어요. 다시 시도해 주세요.</Text>
+      <Text style={s.body}>마지막으로 저장한 기록에서 다시 시작할 수 있어요. 다시 시도해 주세요.</Text>
       <Pressable style={[s.button, s.primary]} onPress={() => void retry()} accessibilityRole="button">
         <Text style={s.primaryText}>다시 시도</Text>
       </Pressable>

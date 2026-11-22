@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { C, elevation, R, T } from '../ui/theme';
+import { undoGaps } from '../core/input-history';
 
 export function ChoiceAnswer({ choices, onPick, disabled }: { choices: string[]; onPick(c: string): void; disabled: boolean }) {
   return (
@@ -16,8 +17,10 @@ export function ChoiceAnswer({ choices, onPick, disabled }: { choices: string[];
   );
 }
 
-export function TypedAnswer({ chosung, onSubmit, disabled }: { chosung?: string; onSubmit(text: string): void; disabled: boolean }) {
-  const [text, setText] = useState('');
+export function TypedAnswer({ chosung, onSubmit, disabled, value, onChange }: { chosung?: string; onSubmit(text: string): void; disabled: boolean; value?:string; onChange?(text:string):void }) {
+  const [localText, setLocalText] = useState('');
+  const text=value??localText;
+  const setText=(next:string)=>{setLocalText(next);onChange?.(next);};
   const ref = useRef<ComponentRef<typeof TextInput>>(null);
   useEffect(() => { if (!disabled) ref.current?.focus(); }, [disabled]);
   return (
@@ -36,12 +39,18 @@ export function TypedAnswer({ chosung, onSubmit, disabled }: { chosung?: string;
   );
 }
 
-export function SpacingAnswer({ syllables, onSubmit, disabled }: { syllables: string[]; onSubmit(gaps: boolean[]): void; disabled: boolean }) {
-  const [gaps, setGaps] = useState<boolean[]>(() => Array(Math.max(0, syllables.length - 1)).fill(false));
+export function SpacingAnswer({ syllables, onSubmit, disabled, value, onChange }: { syllables: string[]; onSubmit(gaps: boolean[]): void; disabled: boolean;value?:boolean[];onChange?(gaps:boolean[]):void }) {
+  const [localGaps, setLocalGaps] = useState<boolean[]>(() => Array(Math.max(0, syllables.length - 1)).fill(false));
+  const gaps=value??localGaps;
+  const [history,setHistory]=useState<boolean[][]>(()=>[gaps]);
+  const [selected,setSelected]=useState(0);
+  const setGaps=(fn:(old:boolean[])=>boolean[])=>{const next=fn(gaps);setHistory(h=>[...h,next].slice(-100));setLocalGaps(next);onChange?.(next);};
+  const undo=()=>{const next=undoGaps(history);setHistory(next);setLocalGaps(next[next.length-1]);onChange?.(next[next.length-1]);};
   const widths = useRef<number[]>([]);
   const last = syllables.length - 1;
   const toggle = (i: number) => {
     if (i < 0 || i >= last) return;
+    setSelected(i);
     setGaps(g => g.map((v, j) => (j === i ? !v : v)));
   };
   // 글자 자체가 터치 칸이다. 오른쪽 절반은 뒤 자리, 왼쪽 절반은 앞 자리를 바꾼다.
@@ -66,6 +75,18 @@ export function SpacingAnswer({ syllables, onSubmit, disabled }: { syllables: st
           </View>
         ))}
       </View>
+      {last>0 && <View style={{gap:8,marginTop:12}}>
+        <Text accessibilityLiveRegion="polite" style={{color:C.sub}}>{selected+1}번째 글자 뒤: {gaps[selected]?'띄어 쓰기':'붙여 쓰기'}</Text>
+        <View style={{flexDirection:'row',gap:8}}>
+          <Pressable accessibilityRole="button" accessibilityLabel="앞 자리" disabled={selected===0||disabled} onPress={()=>setSelected(i=>Math.max(0,i-1))} style={s.position}><Text>앞 자리</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="선택한 자리 바꾸기" disabled={disabled} onPress={()=>toggle(selected)} style={s.position}><Text>선택한 자리 바꾸기</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="뒤 자리" disabled={selected>=last-1||disabled} onPress={()=>setSelected(i=>Math.min(last-1,i+1))} style={s.position}><Text>뒤 자리</Text></Pressable>
+        </View>
+        <View style={{flexDirection:'row',gap:16}}>
+          <Pressable accessibilityRole="button" disabled={disabled||history.length<2} onPress={undo} style={s.position}><Text>되돌리기</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={disabled} onPress={()=>setGaps(g=>g.map(()=>false))} style={s.position}><Text>처음으로</Text></Pressable>
+        </View>
+      </View>}
       <Pressable disabled={disabled} onPress={() => onSubmit(gaps)} style={({ pressed }) => [s.submit, s.submitWide, pressed && s.pressed]} accessibilityRole="button">
         <Text style={s.submitText}>확인</Text>
       </Pressable>
@@ -96,6 +117,7 @@ function Gap({ index, on, disabled, onPress }: { index: number; on: boolean; dis
 }
 
 const s = StyleSheet.create({
+  position:{minHeight:48,paddingHorizontal:10,justifyContent:'center',alignItems:'center',borderRadius:10,backgroundColor:C.grainSoft,flexShrink:1},
   choices: { gap: 10 },
   choice: { backgroundColor: C.paper, borderWidth: 1.5, borderColor: C.line, borderBottomWidth: 3, borderBottomColor: '#E0D2B9', borderRadius: R.button, paddingVertical: 16, paddingHorizontal: 18, ...elevation(1) },
   choiceText: { fontSize: 17, color: C.ink, fontWeight: '600' },

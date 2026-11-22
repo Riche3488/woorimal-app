@@ -1,0 +1,166 @@
+{
+  "status": "needs-language-review",
+  "source": "woorimal_contest/data/app-adapted/spacing.json",
+  "items": [
+    {
+      "key": "spacing:adapted-001",
+      "answers": [
+        "허구한 날 늦잠만 자던 동생이 오늘은 웬일로 일찍 일어났다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-002",
+      "answers": [
+        "아버지께 드리는 편지 첫머리에 아버님 전 상서라고 또박또박 적었다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-003",
+      "answers": [
+        "그 친구는 남의 농담도 곧이들어서 자주 놀림을 받는다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-004",
+      "answers": [
+        "비바람을 무릅쓰고 달려온 친구를 와락 끌어안았다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-005",
+      "answers": [
+        "집에 도착하자마자 젖은 채로 소파에 쓰러졌다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-006",
+      "answers": [
+        "보고서를 수백 번 고쳐 쓴 끝에 겨우 마감을 맞췄다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-007",
+      "answers": [
+        "고장 난 시계를 고치는 데 꼬박 하루가 걸렸다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-008",
+      "answers": [
+        "고향으로 내려가 새출발한 지 벌써 일 년이 지났다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-009",
+      "answers": [
+        "여러 번의 시행착오 끝에 드디어 빵 반죽이 제대로 부풀었다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-010",
+      "answers": [
+        "다 된 죽에 코 빠뜨리지 않으려면 마지막까지 주의 깊게 살펴야 한다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-011",
+      "answers": [
+        "새로 들어온 계약서는 지금 법무팀에서 검토 중이다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-012",
+      "answers": [
+        "숙제를 모두 끝마치자 아이는 그제야 마음 놓고 놀이터로 나갔다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-013",
+      "answers": [
+        "새콤달콤한 귤 한 봉지가 눈 깜짝할 사이에 사라졌다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-014",
+      "answers": [
+        "난다 긴다 하는 선수들이 모두 모인 대회라 긴장이 된다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-015",
+      "answers": [
+        "비가 이렇게 쏟아지니 소풍은 별수 없이 다음으로 미뤄야겠다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-016",
+      "answers": [
+        "한 번 졌다고 기죽지 말고 주말에 꽃구경이나 다녀오자."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-017",
+      "answers": [
+        "산길이 미끄러워 밤에 나 홀로 걷기에는 위험천만하다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-018",
+      "answers": [
+        "물속 깊이 가라앉은 반지를 잠수부가 찾아냈다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-019",
+      "answers": [
+        "오랜만에 만난 죽마고우와 이런저런 이야기를 나누었다."
+      ],
+      "explain": "",
+      "reviewed": false
+    },
+    {
+      "key": "spacing:adapted-020",
+      "answers": [
+        "먹고사는 일이 바빠 고향에 자주 내려가지 못한다."
+      ],
+      "explain": "",
+      "reviewed": false
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 // 홈: 곳간 디오라마(단계별 영상)·다람쥐 레벨·연속 기록·오늘 목표·도토리, 한 판 시작, 오답노트.
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HeroScene, PressableScale } from '../components/art';
@@ -15,7 +15,8 @@ import { DUR, EASE, enterUp } from '../ui/motion';
 import { C, elevation, paperCard, R, T } from '../ui/theme';
 
 export default function Home() {
-  const { pack, save, counts } = useGame();
+  const game=useGame();
+  const { pack, save, counts } = game;
   const lv = levelFor(save.totalGrains);
   const today = localDay(new Date());
   const streak = currentStreak(save.streak, today);
@@ -76,6 +77,11 @@ export default function Home() {
         </Animated.View>
 
         <View style={s.actions}>
+          {save.activeSession && <View style={s.wordRow}>
+            <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:'/play',params:{mode:'resume'}})} style={{flex:1,paddingVertical:12}}><Text style={s.wordText}>이어 하기 · {save.activeSession.round.index}/{save.activeSession.round.questions.length}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={()=>Alert.alert('이 판을 끝낼까요?','푼 문제 기록은 남고, 완료하지 않은 판의 낱알은 받지 않아요.',[{text:'취소',style:'cancel'},{text:'이 판 끝내기',onPress:()=>{void game.sessions?.discard(save.activeSession!.id).catch(()=>{});}}])}><Text style={s.secondarySub}>이 판 끝내기</Text></Pressable>
+          </View>}
+          {!save.activeSession && save.lastOutcome && <Pressable accessibilityRole="button" onPress={()=>router.push('/result')}><Text style={s.secondarySub}>최근 결과 보기</Text></Pressable>}
           <Animated.View entering={enterUp(2)}>
             <PressableScale onPress={openChallenge} haptic={haptic} style={s.challenge} accessibilityRole="button">
               <View style={s.seal}><Text style={s.sealText} maxFontSizeMultiplier={1.2}>오늘</Text></View>
@@ -101,6 +107,7 @@ export default function Home() {
             </Animated.View>
           ) : null}
           <Animated.View entering={enterUp(3)}>
+            <View style={{flexDirection:'row',gap:12,marginBottom:10}}>{[{on:true,label:'보기로 풀기'},{on:false,label:'직접 입력'}].map(option=><Pressable key={option.label} accessibilityRole="radio" accessibilityState={{checked:save.settings.choiceMode===option.on}} onPress={()=>game.updateSettings({choiceMode:option.on})} style={{padding:12,borderRadius:12,backgroundColor:save.settings.choiceMode===option.on?C.grainSoft:C.paper}}><Text style={{color:C.ink}}>{option.label}</Text></Pressable>)}</View>
             <PressableScale onPress={() => router.push({ pathname: '/play', params: { mode: 'normal' } })} haptic={haptic}
               style={s.primary} accessibilityRole="button">
               <Text style={s.primaryText}>한 판 시작</Text>

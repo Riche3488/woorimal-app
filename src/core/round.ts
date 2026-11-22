@@ -16,20 +16,22 @@ export type RoundResult = {
   userAnswer: string;
   elapsedMs: number;
   grains: number;
+  answeredAt?: number;
 };
 
 export type Round = {
   questions: AppQuestion[];
   index: number;
-  hearts: number;
+  hearts: number | null;
+  policy?: { timed: boolean };
   streak: number;
   grains: number;
   startedAt: number; // 현재 문제를 시작한 시각(ms)
   results: RoundResult[];
 };
 
-export function startRound(questions: AppQuestion[], now: number, hearts = START_HEARTS): Round {
-  return { questions, index: 0, hearts, streak: 0, grains: 0, startedAt: now, results: [] };
+export function startRound(questions: AppQuestion[], now: number, hearts: number | null = START_HEARTS, policy?: { timed: boolean }): Round {
+  return { questions, index: 0, hearts, ...(policy ? { policy } : {}), streak: 0, grains: 0, startedAt: now, results: [] };
 }
 
 export function grainsFor(correct: boolean, remainingRatio: number, streakAfter: number): number {
@@ -59,18 +61,18 @@ function settle(round: Round, now: number, how: Settle): Round {
   const q = round.questions[round.index];
   if (!q || isOver(round)) return round;
   const limit = timeLimitMs(q);
-  const elapsedMs = now - round.startedAt;
-  const timedOut = how.kind === 'timeout' || elapsedMs > limit;
+  const elapsedMs = Math.max(0, now - round.startedAt);
+  const timedOut = round.policy?.timed !== false && (how.kind === 'timeout' || elapsedMs > limit);
   const gaveUp = !timedOut && how.kind === 'giveup';
   const input = how.kind === 'answer' ? how.input : null;
   const { correct, synonymHit } = timedOut || input === null ? { correct: false, synonymHit: false } : grade(q, input!);
   const streak = correct ? round.streak + 1 : 0;
-  const grains = grainsFor(correct, Math.max(0, limit - elapsedMs) / limit, streak);
+  const grains = grainsFor(correct, round.policy?.timed === false ? 0 : Math.max(0, limit - elapsedMs) / limit, streak);
   const userAnswer = input === null ? '' : Array.isArray(input) ? gapsToSentence(q.syllables ?? [], input) : String(input).trim();
   return {
     ...round,
     index: round.index + 1,
-    hearts: correct ? round.hearts : round.hearts - 1,
+    hearts: correct || round.hearts === null ? round.hearts : round.hearts - 1,
     streak,
     grains: round.grains + grains,
     startedAt: now,

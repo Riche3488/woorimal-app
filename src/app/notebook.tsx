@@ -24,7 +24,7 @@ const DOTS = ['', '●○○', '●●○', '●●●'];
 function dueText(s: QuestionStat, today: string): string {
   if (!s.box || !s.dueDay) return s.mastered ? '외웠어요' : '';
   const d = dayDiff(today, s.dueDay);
-  return `${d <= 0 ? '오늘 복습' : `${d}일 뒤`}  ${DOTS[s.box]}`;
+  return `${d <= 0 ? '오늘 복습' : `${d}일 뒤`}  ${DOTS[s.box]} · 다음 복습 ${s.dueDay.slice(5).replace('-','월 ')}일`;
 }
 
 function myAnswer(s: QuestionStat): string {
@@ -63,6 +63,7 @@ export default function Notebook() {
           </Pressable>
         ))}
       </View>
+      <Text style={{color:C.sub,fontSize:12,paddingHorizontal:20,paddingVertical:8}}>하트와 시간제한 없이 풀어요. 예정일 전에 맞히면 기억 단계는 유지돼요.</Text>
       {play && (
         <Pressable disabled={!play.on} onPress={() => router.push({ pathname: '/play', params: { mode: play.mode } })}
           style={({ pressed }) => [s.play, !play.on && s.disabled, pressed && s.pressed]} accessibilityRole="button">
