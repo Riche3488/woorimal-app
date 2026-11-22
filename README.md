@@ -53,7 +53,7 @@ npx.cmd expo run:android                                                 # 로�
 npx.cmd eas-cli build -p android --profile development                   # 또는 EAS에서 개발 빌드 APK
 ```
 
-`expo run:android`가 만드는 `android/`는 커밋하지 않는다(`.gitignore`). Expo Go로도 열 수는 있지만(`expo start`에서 `s`로 전환) Expo Go에는 `expo-notifications`가 쓰는 네이티브 모듈이 없어 학습 알림이 꺼진다(`src/data/reminder.ts`).
+`expo run:android`에는 JDK가 필요하다. 따로 설치하지 않았다면 Android Studio에 든 JDK를 쓴다(`$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`). 만들어진 `android/`는 커밋하지 않는다(`.gitignore`). `adb`가 응답하지 않는다는 오류가 나면 `adb kill-server` 뒤 `adb start-server`로 다시 띄운다. Expo Go로도 열 수는 있지만(`expo start`에서 `s`로 전환) Expo Go에는 `expo-notifications`가 쓰는 네이티브 모듈이 없어 학습 알림이 꺼진다(`src/data/reminder.ts`).
 
 ## Android 빌드
 
