@@ -44,10 +44,22 @@ npx.cmd expo start --android               # 기기가 LAN으로 개발 서버�
 npx.cmd expo start --android --localhost   # USB 연결 기기(adb reverse)로 붙을 때
 ```
 
+`expo start`는 네이티브 빌드를 하지 않는다. Metro를 띄워 기기에 설치된 **개발 빌드**(expo-dev-client)로 JS를 열고, `src/` 수정은 저장하면 바로 반영된다(Fast Refresh). 테스트는 따로 `npm.cmd test`로 돌린다.
+
+개발 빌드는 처음 한 번, 그리고 네이티브 모듈을 더하거나 `app.json` 플러그인·권한을 바꿨을 때만 다시 만든다.
+
+```powershell
+npx.cmd expo run:android                                                 # 로컬 빌드(JDK·Android SDK 필요), 에뮬레이터에 설치
+npx.cmd eas-cli build -p android --profile development                   # 또는 EAS에서 개발 빌드 APK
+```
+
+`expo run:android`가 만드는 `android/`는 커밋하지 않는다(`.gitignore`). Expo Go로도 열 수는 있지만(`expo start`에서 `s`로 전환) Expo Go에는 `expo-notifications`가 쓰는 네이티브 모듈이 없어 학습 알림이 꺼진다(`src/data/reminder.ts`).
+
 ## Android 빌드
 
 ```powershell
 npx.cmd eas-cli login
+npx.cmd eas-cli build -p android --profile development  # 개발 빌드 APK(expo-dev-client)
 npx.cmd eas-cli build -p android --profile preview      # 설치용 APK
 npx.cmd eas-cli build -p android --profile production   # Play 스토어용 AAB
 ```
