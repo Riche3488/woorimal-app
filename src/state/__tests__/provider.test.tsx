@@ -151,3 +151,34 @@ test('successful_session_retry_clears_the_same_global_save_error', async () => {
   });
   expect(screen.queryByText('저장하지 못했어요')).toBeNull();
 });
+test('broken_save_can_be_backed_up_and_replaced_with_a_fresh_one', async () => {
+  await AsyncStorage.clear();
+  await AsyncStorage.setItem('woorimal.save.v1', '{"schema":1,"totalGrains":"NaN"');
+  await render(<GameProvider><Probe /></GameProvider>);
+  expect(screen.getByText(/기록을 불러오지 못했어요/)).toBeTruthy();
+  await fireEvent.press(screen.getByText('새로 시작하기'));
+  expect(screen.getByText('결과 0')).toBeTruthy();
+  const keys = await AsyncStorage.getAllKeys();
+  const backup = keys.find(k => k.startsWith('woorimal.save.v1.broken.'));
+  expect(backup).toBeDefined();
+  expect(await AsyncStorage.getItem(backup!)).toBe('{"schema":1,"totalGrains":"NaN"');
+  expect(game.save.totalGrains).toBe(0);
+});
+test('read_failure_offers_only_retry_and_never_discards_the_save', async () => {
+  await AsyncStorage.clear();
+  (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('disk'));
+  await render(<GameProvider><Probe /></GameProvider>);
+  expect(screen.getByText('다시 시도')).toBeTruthy();
+  expect(screen.queryByText('새로 시작하기')).toBeNull();
+  await fireEvent.press(screen.getByText('다시 시도'));
+  expect(screen.getByText('결과 0')).toBeTruthy();
+});
+test('pack_load_failure_shows_an_error_with_retry_instead_of_spinning_forever', async () => {
+  await AsyncStorage.clear();
+  const { loadPack } = jest.requireMock('../../data/pack-store');
+  (loadPack as jest.Mock).mockRejectedValueOnce(new Error('bad pack'));
+  await render(<GameProvider fallback={<Text>로딩</Text>}><Probe /></GameProvider>);
+  expect(screen.getByText(/문제를 불러오지 못했어요/)).toBeTruthy();
+  await fireEvent.press(screen.getByText('다시 시도'));
+  expect(screen.getByText('결과 0')).toBeTruthy();
+});

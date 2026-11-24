@@ -11,7 +11,7 @@ jest.mock('expo-constants', () => ({
 jest.mock('expo-notifications', () => {
   throw new Error("Cannot find native module 'ExpoApplication'");
 });
-jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+jest.mock('expo-router', () => ({ router: { push: jest.fn(), replace: jest.fn() }, usePathname: () => '/' }));
 jest.mock('../../state/GameProvider', () => ({
   useGame: () => ({ save: { activeSession: null }, counts: { due: 0 } })
 }));

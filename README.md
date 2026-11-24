@@ -40,8 +40,8 @@
 npm.cmd install
 npm.cmd test            # Jest
 npx.cmd tsc --noEmit    # 타입 검사
-npm.cmd run start:android                  # = expo start --android. 기기가 LAN으로 개발 서버에 닿을 때
-npx.cmd expo start --android --localhost   # USB 연결 기기(adb reverse)로 붙을 때
+npm.cmd run start:android                  # = APP_VARIANT=development expo start --android. 기기가 LAN으로 개발 서버에 닿을 때
+npm.cmd run start:android -- --localhost   # USB 연결 기기(adb reverse)로 붙을 때
 ```
 
 `npm.cmd run android`는 Metro만 띄우는 명령이 아니라 `expo run:android`, 곧 네이티브 개발 빌드(수 분, JDK·Android SDK 필요)다. JS만 다시 열 때는 `npm.cmd run start:android`를 쓴다.
@@ -51,11 +51,13 @@ npx.cmd expo start --android --localhost   # USB 연결 기기(adb reverse)로 �
 개발 빌드는 처음 한 번, 그리고 네이티브 모듈을 더하거나 `app.json` 플러그인·권한을 바꿨을 때만 다시 만든다.
 
 ```powershell
-npm.cmd run android                                                      # = expo run:android. 로컬 빌드(JDK·Android SDK 필요), 에뮬레이터에 설치
+npm.cmd run android                                                      # = APP_VARIANT=development expo run:android. 로컬 빌드(JDK·Android SDK 필요), 에뮬레이터에 설치
 npx.cmd eas-cli build -p android --profile development                   # 또는 EAS에서 개발 빌드 APK
 ```
 
-EAS `development` 프로필은 `APP_VARIANT=development`로 빌드해서 패키지 이름이 `kr.co.woorimalcontest.app.dev`, 앱 이름이 "우리말 곳간 (개발)"이 된다(`app.config.js`). 그래서 preview·스토어 APK와 한 기기에 함께 설치되고 저장 기록도 따로 간다. 로컬 `expo run:android`는 변수를 주지 않으면 원래 패키지 이름을 쓴다.
+EAS `development` 프로필과 npm 스크립트 `start`·`android`·`start:android`(`scripts/expo-dev.mjs`)는 `APP_VARIANT=development`로 돌아서 패키지 이름이 `kr.co.woorimalcontest.app.dev`, 앱 이름이 "우리말 곳간 (개발)", 스킴이 `woorimal-dev`가 된다(`app.config.js`). 그래서 Play 테스트·스토어 앱과 한 기기에 함께 설치되고 저장 기록도 따로 간다. `npx.cmd expo ...`를 직접 부르면 변수가 빠져 스토어 패키지 이름으로 빌드되니(서명이 달라 설치 실패, 지우면 그 기기의 기록이 사라짐) npm 스크립트를 쓴다. 예전에 변수 없이 만든 `android/`가 남아 있으면 `npx.cmd expo prebuild --clean`(변수 포함: `node scripts/expo-dev.mjs prebuild --clean`)으로 다시 만든다.
+
+스토어·preview 빌드는 expo-dev-client가 넣는 `exp+woorimal-app` 스킴을 빼고 `woorimal`만 둔다(개발 실행기 네이티브 코드는 릴리스에서 원래 빠진다).
 
 `expo run:android`에는 JDK가 필요하다. 따로 설치하지 않았다면 Android Studio에 든 JDK를 쓴다(`$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`). 만들어진 `android/`는 커밋하지 않는다(`.gitignore`). `adb`가 응답하지 않는다는 오류가 나면 `adb kill-server` 뒤 `adb start-server`로 다시 띄운다. Expo Go로도 열 수는 있지만(`expo start`에서 `s`로 전환) Expo Go에는 `expo-notifications`가 쓰는 네이티브 모듈이 없어 학습 알림이 꺼진다(`src/data/reminder.ts`).
 

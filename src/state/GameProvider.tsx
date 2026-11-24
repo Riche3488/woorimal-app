@@ -24,7 +24,7 @@ import { loadPack, refreshPack } from '../data/pack-store';
 import { replaceOwnedReminders } from '../data/reminder';
 import type { CrosswordProgress } from '../core/crossword';
 import { makeCrossword, type MadeLevel } from '../core/crossword-make';
-import { addMadeCrossword, defaultSave, finishCard, finishRound, loadSaveResult, saveCrossword, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
+import { addMadeCrossword, backupBrokenSave, defaultSave, finishCard, finishRound, loadSaveResult, saveCrossword, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 export type Game = {
   sessions?: {
     begin(mode: RoundMode, type?: QuestionType, count?: number): Promise<SessionSnapshot>;
@@ -90,7 +90,14 @@ export function GameProvider({
   const [lastPracticeType, setLastPracticeType] = useState<QuestionType | null>(null);
   const nextPack = useRef<AppPack | null>(null);
   const store = useRef<SaveStore | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  // pack: 문제 묶음을 못 읽음, io: 저장을 못 읽음, broken: 저장이 깨짐(원문 보관)
+  const [loadError, setLoadError] = useState<null | {
+    kind: 'pack' | 'io';
+  } | {
+    kind: 'broken';
+    raw: string;
+  }>(null);
+  const [resetError, setResetError] = useState(false);
   const [writeError, setWriteError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const pendingWrites = useRef<{
@@ -183,14 +190,29 @@ export function GameProvider({
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [p, loaded] = await Promise.all([loadPack(), loadSaveResult()]);
+      const loaded = await loadSaveResult();
       if (!alive) return;
       if (!('save' in loaded)) {
-        setLoadError(true);
+        setLoadError(loaded.kind === 'invalid' ? {
+          kind: 'broken',
+          raw: loaded.raw
+        } : {
+          kind: 'io'
+        });
         return;
       }
+      let p: AppPack;
+      try {
+        p = await loadPack();
+      } catch {
+        if (alive) setLoadError({
+          kind: 'pack'
+        });
+        return;
+      }
+      if (!alive) return;
       const s = syncDecorations(seedDiscoveries(loaded.save, p.questions));
-      setLoadError(false);
+      setLoadError(null);
       store.current = createSaveStore(s, writeSave);
       setPack(p);
       setSave(s);
@@ -473,8 +495,18 @@ export function GameProvider({
     justifyContent: 'center',
     gap: 16
   }}>
-    <Text>기록을 불러오지 못했어요. 저장된 기록을 덮어쓰지 않았어요.</Text>
+    <Text>{loadError.kind === 'pack' ? '문제를 불러오지 못했어요. 앱을 다시 열거나 업데이트해 주세요.' : '기록을 불러오지 못했어요. 저장된 기록을 덮어쓰지 않았어요.'}</Text>
     <Pressable accessibilityRole="button" onPress={() => setLoadAttempt(n => n + 1)}><Text>다시 시도</Text></Pressable>
+    {loadError.kind === 'broken' && <>
+      <Text>기록이 손상되어 읽을 수 없어요. 새로 시작하면 손상된 기록은 기기 안에 따로 보관해 둬요.</Text>
+      <Pressable accessibilityRole="button" onPress={() => {
+        void backupBrokenSave(loadError.raw).then(() => {
+          setResetError(false);
+          setLoadAttempt(n => n + 1);
+        }).catch(() => setResetError(true));
+      }}><Text>새로 시작하기</Text></Pressable>
+      {resetError && <Text accessibilityRole="alert">새로 시작하지 못했어요. 기기 저장 공간을 확인해 주세요.</Text>}
+    </>}
   </View>;
   if (!ready || !pack) return <>{fallback}</>;
   return <GameContext.Provider value={{

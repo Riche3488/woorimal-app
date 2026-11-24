@@ -14,10 +14,13 @@ const mockGame = {
 jest.mock('../../state/GameProvider', () => ({
   useGame: () => mockGame
 }));
+let mockPathname = '/record';
 jest.mock('expo-router', () => ({
   router: {
-    push: jest.fn()
-  }
+    push: jest.fn(),
+    replace: jest.fn()
+  },
+  usePathname: () => mockPathname
 }));
 test('recurring_schedule_routes_each_delivery_once_while_the_process_stays_alive', async () => {
   const response = (date: number) => ({
@@ -51,4 +54,26 @@ test('recurring_schedule_routes_each_delivery_once_while_the_process_stays_alive
   await act(async () => receive(response(1000 + 86400000)));
   expect(router.push).toHaveBeenCalledTimes(2);
   expect(router.push).toHaveBeenLastCalledWith('/play?mode=review&count=3');
+});
+
+test('tapping_a_reminder_on_the_running_play_screen_does_not_open_a_second_play_screen', async () => {
+  (router.push as jest.Mock).mockClear();
+  mockPathname = '/play';
+  (mockGame.save as { activeSession: unknown }).activeSession = { id: 's' };
+  try {
+    await render(<ReminderNavigation />);
+    const receive = (Notifications.addNotificationResponseReceivedListener as jest.Mock).mock.calls.at(-1)[0];
+    await act(async () => receive({
+      notification: {
+        date: 5000,
+        request: { identifier: `${REMINDER_OWNER}.daily`, trigger: null, content: { data: { owner: REMINDER_OWNER } } }
+      },
+      actionIdentifier: 'default'
+    }));
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  } finally {
+    mockPathname = '/record';
+    mockGame.save.activeSession = null;
+  }
 });

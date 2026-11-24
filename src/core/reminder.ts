@@ -32,6 +32,20 @@ export function reminderPlans(settings: ReminderSettings): ReminderPlan[] {
 export function reminderDestination(active: boolean, due: number): '/play?mode=resume' | '/play?mode=review&count=3' | '/' {
   return active ? '/play?mode=resume' : due ? '/play?mode=review&count=3' : '/';
 }
+export type ReminderNavigation = {
+  action: 'push' | 'replace';
+  href: ReturnType<typeof reminderDestination>;
+} | {
+  action: 'none';
+};
+// 판 화면(/play)에서 알림을 누르면 판 화면을 하나 더 쌓지 않는다.
+// 진행 중인 판이면 그 판이 이미 보이므로 그대로 두고, 아니면 판 화면을 바꾼다.
+export function reminderNavigation(pathname: string, active: boolean, due: number): ReminderNavigation {
+  const href = reminderDestination(active, due);
+  if (pathname === href) return { action: 'none' };
+  if (pathname === '/play') return active ? { action: 'none' } : { action: 'replace', href };
+  return { action: 'push', href };
+}
 type Input = {
   now: Date;
   hour: number;

@@ -52,7 +52,7 @@ PowerShell, `run_in_background: true`:
 Set-Location D:\projects\woorimal_app
 $SCRATCH = '<scratchpad>'
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"; $env:CI = "1"
-npx.cmd expo run:android --device emulator-5554 *> "$SCRATCH\run.log"
+npm.cmd run android -- --device emulator-5554 *> "$SCRATCH\run.log"
 ```
 Metro가 계속 돌기 때문에 이 명령은 끝나지 않는다. 로그를 기다린다. foreground `sleep`은 하네스가 막으므로 Monitor의 until 조건(또는 `run_in_background: true`인 Bash)으로 기다리고, 끝난 알림을 받은 뒤 결과를 본다(timeout 600000):
 ```bash
@@ -67,14 +67,14 @@ grep -a -A12 "What went wrong\|CommandError" "$L"   # 실패했을 때
 
 ## 3. 앱을 Metro에 붙여 다시 띄우기
 
-로컬 빌드는 `APP_VARIANT`를 주지 않으므로 패키지 이름이 `kr.co.woorimalcontest.app`이다(EAS development APK는 `.dev`가 붙는다). 설치 전부터 떠 있던 앱 프로세스가 남아 빈 화면이나 낡은 오류(예: `Cannot find native module 'ExpoApplication'`)를 보일 수 있다. 완전히 껐다 켠다. Git Bash에서는 `/sdcard` 같은 경로가 바뀌지 않게 `MSYS_NO_PATHCONV=1`을 준다.
+`npm.cmd run android`는 `APP_VARIANT=development`로 빌드하므로(`scripts/expo-dev.mjs`) 패키지 이름이 `kr.co.woorimalcontest.app.dev`, 스킴이 `woorimal-dev`다(EAS development APK와 같다). `npx.cmd expo run:android`를 직접 부르지 않는다. 변수 없이 만든 예전 `android/`가 남아 있으면(`android/app/build.gradle`의 `applicationId`에 `.dev`가 없으면) `node scripts/expo-dev.mjs prebuild --clean`으로 먼저 다시 만든다. 설치 전부터 떠 있던 앱 프로세스가 남아 빈 화면이나 낡은 오류(예: `Cannot find native module 'ExpoApplication'`)를 보일 수 있다. 완전히 껐다 켠다. Git Bash에서는 `/sdcard` 같은 경로가 바뀌지 않게 `MSYS_NO_PATHCONV=1`을 준다.
 ```bash
 export MSYS_NO_PATHCONV=1; A="adb -s emulator-5554"
 $A reverse tcp:8081 tcp:8081
 $A shell input keyevent KEYCODE_WAKEUP
-$A shell am force-stop kr.co.woorimalcontest.app
+$A shell am force-stop kr.co.woorimalcontest.app.dev
 $A shell am start -a android.intent.action.VIEW \
-  -d "exp+woorimal-app://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" kr.co.woorimalcontest.app
+  -d "exp+woorimal-app://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081" kr.co.woorimalcontest.app.dev
 ```
 첫 화면까지 30초 가까이 걸린다(처음엔 검은 화면 → 로딩 스피너 → 홈). `adb logcat -d -s ReactNativeJS`에 `Running "main"`이 찍혔는지 본다.
 개발 메뉴 시트가 뜨면 `KEYCODE_BACK`으로 닫는다(X 버튼 탭은 잘 안 먹음).

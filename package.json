@@ -37,9 +37,9 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "start:android": "expo start --android",
+    "start": "node scripts/expo-dev.mjs start",
+    "android": "node scripts/expo-dev.mjs run:android",
+    "start:android": "node scripts/expo-dev.mjs start --android",
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",

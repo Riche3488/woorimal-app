@@ -22,3 +22,14 @@ test('복습할 문제가 없으면 연속 기록, 그것도 없으면 한 판 �
   expect(planReminder({ now: at('2026-11-20T10:00:00'), hour: 19, playedToday: false, dueToday: 0, dueTomorrow: 0, streak: 0 }).body).toBe('오늘의 낱말과 한 판으로 우리말을 채워 보세요');
   expect(planReminder({ now: at('2026-11-20T10:00:00'), hour: 19, playedToday: true, dueToday: 0, dueTomorrow: 0, streak: 5 }).body).toBe('🔥 6일째 연속 기록에 도전해요');
 });
+
+import { reminderNavigation } from '../reminder';
+
+test('알림을 누르면 판 화면 밖에서는 쌓고, 판 화면에서는 같은 판을 겹쳐 열지 않는다', () => {
+  expect(reminderNavigation('/', true, 0)).toEqual({ action: 'push', href: '/play?mode=resume' });
+  expect(reminderNavigation('/result', false, 2)).toEqual({ action: 'push', href: '/play?mode=review&count=3' });
+  expect(reminderNavigation('/play', true, 2)).toEqual({ action: 'none' });
+  expect(reminderNavigation('/play', false, 2)).toEqual({ action: 'replace', href: '/play?mode=review&count=3' });
+  expect(reminderNavigation('/', false, 0)).toEqual({ action: 'none' });
+  expect(reminderNavigation('/settings', false, 0)).toEqual({ action: 'push', href: '/' });
+});

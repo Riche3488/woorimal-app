@@ -343,6 +343,11 @@ export async function loadSave(): Promise<SaveData> {
   const result = await loadSaveResult();
   return 'save' in result ? result.save : defaultSave();
 }
+// 깨진 저장은 지우지 않고 다른 키에 그대로 옮겨 둔 뒤 비운다. 옮기기에 실패하면 원본을 건드리지 않는다.
+export async function backupBrokenSave(raw: string, now = Date.now()): Promise<void> {
+  await AsyncStorage.setItem(`${SAVE_KEY}.broken.${now}`, raw);
+  await AsyncStorage.removeItem(SAVE_KEY);
+}
 export async function writeSave(d: SaveData): Promise<void> {
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(d));
 }
