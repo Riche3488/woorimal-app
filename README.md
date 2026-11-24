@@ -40,18 +40,22 @@
 npm.cmd install
 npm.cmd test            # Jest
 npx.cmd tsc --noEmit    # 타입 검사
-npx.cmd expo start --android               # 기기가 LAN으로 개발 서버에 닿을 때
+npm.cmd run start:android                  # = expo start --android. 기기가 LAN으로 개발 서버에 닿을 때
 npx.cmd expo start --android --localhost   # USB 연결 기기(adb reverse)로 붙을 때
 ```
+
+`npm.cmd run android`는 Metro만 띄우는 명령이 아니라 `expo run:android`, 곧 네이티브 개발 빌드(수 분, JDK·Android SDK 필요)다. JS만 다시 열 때는 `npm.cmd run start:android`를 쓴다.
 
 `expo start`는 네이티브 빌드를 하지 않는다. Metro를 띄워 기기에 설치된 **개발 빌드**(expo-dev-client)로 JS를 열고, `src/` 수정은 저장하면 바로 반영된다(Fast Refresh). 테스트는 따로 `npm.cmd test`로 돌린다.
 
 개발 빌드는 처음 한 번, 그리고 네이티브 모듈을 더하거나 `app.json` 플러그인·권한을 바꿨을 때만 다시 만든다.
 
 ```powershell
-npx.cmd expo run:android                                                 # 로컬 빌드(JDK·Android SDK 필요), 에뮬레이터에 설치
+npm.cmd run android                                                      # = expo run:android. 로컬 빌드(JDK·Android SDK 필요), 에뮬레이터에 설치
 npx.cmd eas-cli build -p android --profile development                   # 또는 EAS에서 개발 빌드 APK
 ```
+
+EAS `development` 프로필은 `APP_VARIANT=development`로 빌드해서 패키지 이름이 `kr.co.woorimalcontest.app.dev`, 앱 이름이 "우리말 곳간 (개발)"이 된다(`app.config.js`). 그래서 preview·스토어 APK와 한 기기에 함께 설치되고 저장 기록도 따로 간다. 로컬 `expo run:android`는 변수를 주지 않으면 원래 패키지 이름을 쓴다.
 
 `expo run:android`에는 JDK가 필요하다. 따로 설치하지 않았다면 Android Studio에 든 JDK를 쓴다(`$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"`). 만들어진 `android/`는 커밋하지 않는다(`.gitignore`). `adb`가 응답하지 않는다는 오류가 나면 `adb kill-server` 뒤 `adb start-server`로 다시 띄운다. Expo Go로도 열 수는 있지만(`expo start`에서 `s`로 전환) Expo Go에는 `expo-notifications`가 쓰는 네이티브 모듈이 없어 학습 알림이 꺼진다(`src/data/reminder.ts`).
 
