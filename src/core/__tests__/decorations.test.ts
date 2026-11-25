@@ -1,4 +1,4 @@
-import { DECORATIONS, SLOTS, decorationProgress, evaluateUnlocks, equipDecoration, markDecorationsSeen, newDecorations, syncDecorations, unequipAll, type DecorationId } from '../decorations';
+import { DECORATIONS, SLOTS, decorationProgress, evaluateUnlocks, equipDecoration, markDecorationsSeen, newDecorations, syncDecorations, unequipAll, unequipDecoration, type DecorationId } from '../decorations';
 import { defaultSave, type SaveData } from '../../data/save';
 import { readLearningState } from '../../data/save-activity';
 import { xpForLevel } from '../growth';
@@ -49,13 +49,17 @@ test('new_conditions_unlock_from_existing_records', () => {
   const save: SaveData = {
     ...s,
     rounds: 5,
-    streak: { ...s.streak, days: 7 },
+    streak: { ...s.streak, days: 7, lastDay: '2026-11-25' },
     totalGrains: xpForLevel(12),
     crosswords: { a: { solved: [1, 2, 3, 4, 5, 6], revealed: {}, helps: 0 }, b: { solved: [1, 2, 3, 4], revealed: {}, helps: 0 } },
     challengeHistory: Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`2026-11-0${i + 1}`, 'oxo']))
   };
-  expect(evaluateUnlocks(save)).toEqual(expect.arrayContaining(['scarecrow', 'clay-jars', 'kite', 'stone-lantern', 'persimmon-tree', 'magpie', 'watermill']));
-  expect(evaluateUnlocks(save)).not.toContain('golden-gourd');
+  expect(evaluateUnlocks(save, '2026-11-25')).toEqual(expect.arrayContaining(['scarecrow', 'clay-jars', 'kite', 'stone-lantern', 'persimmon-tree', 'magpie', 'watermill']));
+  expect(evaluateUnlocks(save, '2026-11-25')).not.toContain('golden-gourd');
+  // 이미 끊긴 연속 기록(저장 값만 7)으로는 연속 장식을 주지 않는다.
+  expect(evaluateUnlocks(save, '2026-11-30')).not.toContain('stone-lantern');
+  // 같은 낱말을 두 번 센 퍼즐 기록은 한 번만 센다.
+  expect(decorationProgress({ ...s, crosswords: { a: { solved: [1, 1, 1, 2], revealed: {}, helps: 0 } } }, 'kite').current).toBe(2);
 });
 test('progress_reports_current_toward_target_and_caps_at_target', () => {
   const s = defaultSave();
@@ -64,7 +68,7 @@ test('progress_reports_current_toward_target_and_caps_at_target', () => {
   // 한 번 얻은 장식은 연속 기록이 끊겨도 다 모은 것으로 보인다.
   expect(decorationProgress(withUnlocked(['stone-lantern']), 'stone-lantern').done).toBe(true);
 });
-test('equip_fills_free_slots_toggles_off_and_refuses_when_full', () => {
+test('equip_fills_free_slots_is_idempotent_and_refuses_when_full', () => {
   let save = withUnlocked(['leaf-flag', 'word-sign', 'kite', 'magpie']);
   save = equipDecoration(save, 'leaf-flag');
   save = equipDecoration(save, 'word-sign');
@@ -72,7 +76,10 @@ test('equip_fills_free_slots_toggles_off_and_refuses_when_full', () => {
   expect(save.decorations.equipped).toEqual(['leaf-flag', 'word-sign', 'kite']);
   expect(SLOTS).toBe(3);
   expect(equipDecoration(save, 'magpie')).toBe(save);
-  save = equipDecoration(save, 'word-sign');
+  // 두 번 눌러도 놓은 장식이 빠지지 않는다.
+  expect(equipDecoration(save, 'kite')).toBe(save);
+  expect(unequipDecoration(save, 'magpie')).toBe(save);
+  save = unequipDecoration(save, 'word-sign');
   expect(save.decorations.equipped).toEqual(['leaf-flag', null, 'kite']);
   save = equipDecoration(save, 'magpie');
   expect(save.decorations.equipped).toEqual(['leaf-flag', 'magpie', 'kite']);

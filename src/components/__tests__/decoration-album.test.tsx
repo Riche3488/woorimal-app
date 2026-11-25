@@ -33,11 +33,13 @@ test('shows_collection_count_new_badge_and_locked_progress_then_marks_seen', asy
 });
 
 test('full_slots_show_hint_instead_of_equipping', async () => {
-  const equipDecoration = jest.fn();
-  await render(<GameContextProvider value={game(saveWith(['leaf-flag', 'word-sign', 'kite', 'magpie'], ['leaf-flag', 'word-sign', 'kite']), { equipDecoration })}><DecorationAlbum /></GameContextProvider>);
+  const equipDecoration = jest.fn(), unequipDecoration = jest.fn();
+  await render(<GameContextProvider value={game(saveWith(['leaf-flag', 'word-sign', 'kite', 'magpie'], ['leaf-flag', 'word-sign', 'kite']), { equipDecoration, unequipDecoration })}><DecorationAlbum /></GameContextProvider>);
   await fireEvent.press(screen.getByLabelText(/^까치/));
   expect(equipDecoration).not.toHaveBeenCalled();
   expect(screen.getByText(/자리가 꽉 찼어요/)).toBeTruthy();
   await fireEvent.press(screen.getByLabelText(/^방패연/));
-  expect(equipDecoration).toHaveBeenCalledWith('kite');
+  // 곳간에 있는 장식을 누르면 '빼기'를 요청한다(뒤집기 아님).
+  expect(unequipDecoration).toHaveBeenCalledWith('kite');
+  expect(equipDecoration).not.toHaveBeenCalled();
 });

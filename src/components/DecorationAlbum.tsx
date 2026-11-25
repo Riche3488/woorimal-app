@@ -41,7 +41,8 @@ export function DecorationAlbum() {
           disabled={!p.done} onPress={() => {
             if (!on && used >= SLOTS) return setHint('자리가 꽉 찼어요. 곳간에 있는 장식을 눌러 하나를 빼 주세요.');
             setHint(null);
-            game.equipDecoration?.(id);
+            if (on) game.unequipDecoration?.(id);
+            else game.equipDecoration?.(id);
           }} style={[s.card, on && s.cardOn]}>
             {isNew && <View style={s.newPill}><Text style={s.newText}>NEW</Text></View>}
             <Image source={ART.decoration[id]} style={[s.thumb, !p.done && s.locked]} tintColor={p.done ? undefined : C.faint} contentFit="contain" accessible={false} />

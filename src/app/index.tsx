@@ -136,7 +136,7 @@ export default function Home() {
             } : {})
           }
         })} />
-          <Pressable accessibilityRole="button" style={s.wordRow} onPress={() => router.push('/collection')}><Text style={s.wordText}>곳간 꾸미기 · 낱말 도감</Text><Text style={s.decoCount}>장식 {save.decorations.unlocked.length}/{DECORATION_IDS.length}</Text>{newDecos > 0 && <View style={s.newPill} accessibilityLabel={`새 장식 ${newDecos}개`}><Text style={s.newPillText}>NEW {newDecos}</Text></View>}</Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={`곳간 꾸미기 · 낱말 도감, 장식 ${save.decorations.unlocked.length}/${DECORATION_IDS.length}${newDecos > 0 ? `, 새 장식 ${newDecos}개` : ''}`} style={s.wordRow} onPress={() => router.push('/collection')}><Text style={s.wordText}>곳간 꾸미기 · 낱말 도감</Text><Text style={s.decoCount}>장식 {save.decorations.unlocked.length}/{DECORATION_IDS.length}</Text>{newDecos > 0 && <View style={s.newPill}><Text style={s.newPillText}>NEW {newDecos}</Text></View>}</Pressable>
           <Animated.View entering={enterUp(2)}>
             <PressableScale onPress={openChallenge} haptic={haptic} style={s.challenge} accessibilityRole="button">
               <View style={s.seal}><Text style={s.sealText} maxFontSizeMultiplier={1.2}>오늘</Text></View>

@@ -5,7 +5,7 @@ import { checkpointSession, commitSession, discardSession } from '../core/sessio
 import { createSession, policyFor, type SessionSnapshot } from '../core/session';
 import { recordExperienceEvent } from '../data/experience-events';
 import { finishCrosswordEntry } from '../data/save';
-import { syncDecorations, equipDecoration, unequipAll, markDecorationsSeen, type DecorationId } from '../core/decorations';
+import { syncDecorations, equipDecoration, unequipDecoration, unequipAll, markDecorationsSeen, type DecorationId } from '../core/decorations';
 import { seedDiscoveries } from '../core/collection';
 import { pickQuickRound } from '../core/quick-play';
 import { useToday } from './useToday';
@@ -32,7 +32,8 @@ export type Game = {
     finish(id: string): Promise<void>;
     discard(id: string): Promise<void>;
   };
-  equipDecoration?(id: DecorationId): void; // 장착 중이면 빼고, 아니면 빈 자리에 놓는다
+  equipDecoration?(id: DecorationId): void; // 빈 자리에 놓는다(이미 있으면 그대로)
+  unequipDecoration?(id: DecorationId): void;
   unequipDecorations?(): void;
   markDecorationsSeen?(): void;
   today?: string;
@@ -207,7 +208,14 @@ export function GameProvider({
         return;
       }
       if (!alive) return;
-      const s = syncDecorations(seedDiscoveries(loaded.save, p.questions));
+      const seeded = seedDiscoveries(loaded.save, p.questions);
+      const s = syncDecorations(seeded);
+      // 불러오는 순간 새 조건으로 얻은 장식(업데이트 직후 기존 사용자)도 해금 기록을 남긴다.
+      for (const id of s.decorations.unlocked) if (!seeded.decorations.unlocked.includes(id)) void recordExperienceEvent({
+        id: `unlock:${id}`,
+        at: Date.now(),
+        kind: 'reward_unlocked'
+      }).catch(() => {});
       setLoadError(null);
       store.current = createSaveStore(s, writeSave);
       setPack(p);
@@ -484,6 +492,9 @@ export function GameProvider({
     today,
     equipDecoration: id => {
       void persist(d => equipDecoration(d, id)).catch(() => {});
+    },
+    unequipDecoration: id => {
+      void persist(d => unequipDecoration(d, id)).catch(() => {});
     },
     unequipDecorations: () => {
       void persist(unequipAll).catch(() => {});

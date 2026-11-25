@@ -15,7 +15,7 @@ import { useGame } from '../state/GameProvider';
 import { resultAction } from '../core/result-actions';
 import { dailyProgress } from '../core/activity';
 import { addDays } from '../core/growth';
-import { DECORATIONS, RARITY_LABEL, newDecorations } from '../core/decorations';
+import { DECORATION_IDS, DECORATIONS, RARITY_LABEL, newDecorations } from '../core/decorations';
 import { Image } from 'expo-image';
 import { ART } from '../../assets/art';
 import { DUR, EASE, enterUp } from '../ui/motion';
@@ -146,6 +146,9 @@ export default function Result() {
               </View>
             </Pressable>
           </Pop>}
+        {freshDecos.length === 0 && save.decorations.unlocked.length > 0 && <Pressable accessibilityRole="button" onPress={() => router.push('/collection')} hitSlop={8}>
+            <Text style={s.link}>곳간 꾸미기 · 장식 {save.decorations.unlocked.length}/{DECORATION_IDS.length}</Text>
+          </Pressable>}
         {wrong.length > 0 && <Pressable onPress={() => setShowWrong(v => !v)} hitSlop={8}>
             <Text style={s.link}>{showWrong ? '틀린 문제 접기' : `틀린 문제 보기 (${wrong.length})`}</Text>
           </Pressable>}
