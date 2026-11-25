@@ -1,12 +1,10 @@
 // 곳간 낱말: 외운 낱말(간격 복습을 마친 낱말)을 곳간에 쌓인 낟가리처럼 모아 보여 준다. 눌러서 해설 보기.
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ART } from '../../assets/art';
 import { wordCollection, discoveredWords } from '../core/collection';
-import { DECORATIONS, type DecorationId } from '../core/decorations';
+import { DecorationAlbum } from '../components/DecorationAlbum';
 import { useGame } from '../state/GameProvider';
 import { C, paperCard, R, T } from '../ui/theme';
 export default function Collection() {
@@ -37,6 +35,8 @@ export default function Collection() {
           <View style={s.stat}><Text style={s.statNum}>{mastered.length}</Text><Text style={s.statLabel}>외운 낱말</Text></View>
           <View style={s.stat}><Text style={s.statNum}>{discovered.length}</Text><Text style={s.statLabel}>발견한 낱말</Text></View>
         </View>
+        <DecorationAlbum />
+        <Text style={s.title}>낱말 도감</Text>
         <View style={{
         flexDirection: 'row',
         gap: 12
@@ -55,19 +55,6 @@ export default function Collection() {
             <Text style={s.detailWord}>{opened.word}</Text>
             <Text style={s.detailText}>{opened.explain || '해설이 아직 없어요'}</Text>
           </View> : null}
-        <Text style={s.title}>곳간 장식</Text>
-        {(Object.keys(DECORATIONS) as DecorationId[]).map(id => {
-        const item = DECORATIONS[id],
-          unlocked = save.decorations.unlocked.includes(id),
-          equipped = save.decorations.equipped === id;
-        return <Pressable key={id} accessibilityRole="button" accessibilityState={{
-          disabled: !unlocked,
-          selected: equipped
-        }} disabled={!unlocked} onPress={() => game.equipDecoration?.(id)} style={[s.detail, s.decoRow, {
-          opacity: unlocked ? 1 : 0.6
-        }]}><Image source={ART.decoration[id]} style={[s.decoThumb, !unlocked && s.decoLocked]} contentFit="contain" accessible={false} /><View style={s.decoText}><Text style={s.detailWord}>{item.name}{equipped ? ' · 장착 중' : ''}</Text><Text style={s.detailText}>{unlocked ? '눌러서 곳간에 장착해요' : item.condition}</Text></View></Pressable>;
-      })}
-        {save.decorations.equipped && <Pressable accessibilityRole="button" onPress={() => game.equipDecoration?.(null)} style={s.chip}><Text>장식 해제</Text></Pressable>}
       </ScrollView>
     </SafeAreaView>;
 }
@@ -162,21 +149,5 @@ const s = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: C.sub
-  },
-  decoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14
-  },
-  decoThumb: {
-    width: 64,
-    height: 64
-  },
-  decoLocked: {
-    opacity: 0.35
-  },
-  decoText: {
-    flex: 1,
-    gap: 4
   }
 });

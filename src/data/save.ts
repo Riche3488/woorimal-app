@@ -106,7 +106,8 @@ export function defaultSave(): SaveData {
     activityVersion: 1,
     decorations: {
       unlocked: [],
-      equipped: null
+      equipped: [null, null, null],
+      seen: []
     }
   };
 }

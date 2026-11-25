@@ -14,7 +14,16 @@ export const ART = {
   decoration: {
     'leaf-flag': require('./deco-leaf-flag.webp'),
     'word-sign': require('./deco-word-sign.webp'),
+    scarecrow: require('./deco-scarecrow.webp'),
+    'clay-jars': require('./deco-clay-jars.webp'),
+    kite: require('./deco-kite.webp'),
     'acorn-basket': require('./deco-acorn-basket.webp'),
+    'stone-lantern': require('./deco-stone-lantern.webp'),
+    'persimmon-tree': require('./deco-persimmon-tree.webp'),
+    'scholar-desk': require('./deco-scholar-desk.webp'),
+    magpie: require('./deco-magpie.webp'),
+    watermill: require('./deco-watermill.webp'),
+    'golden-gourd': require('./deco-golden-gourd.webp'),
   },
 } as const;
 

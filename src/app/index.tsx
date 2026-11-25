@@ -20,6 +20,7 @@ import { emptyProgress } from '../core/progress';
 import { seededRng } from '../core/challenge';
 import { DailyMission } from '../components/DailyMission';
 import { BarnDecorations } from '../components/BarnDecorations';
+import { DECORATION_IDS, newDecorations } from '../core/decorations';
 export default function Home() {
   const game = useGame();
   const {
@@ -28,6 +29,7 @@ export default function Home() {
     counts
   } = game;
   const lv = levelFor(save.totalGrains);
+  const newDecos = newDecorations(save).length;
   const today = game.today ?? localDay(new Date());
   const streak = currentStreak(save.streak, today);
   const daily = dailyProgress(save.activity, today),
@@ -69,7 +71,7 @@ export default function Home() {
 
         <Animated.View entering={enterUp(0)} style={s.diorama}>
           <HeroScene stage={barnStage(lv.level)} style={StyleSheet.absoluteFill} />
-          <BarnDecorations id={save.decorations.equipped} />
+          <BarnDecorations slots={save.decorations.equipped} />
           <View style={s.badge} accessible accessibilityLabel={`다람쥐 ${lv.level}레벨 · ${barnFor(lv.level).name}`}>
             <Text style={s.badgeLv}>Lv.{lv.level}</Text>
             <Text style={s.badgeBarn}>{barnFor(lv.level).name}</Text>
@@ -134,7 +136,7 @@ export default function Home() {
             } : {})
           }
         })} />
-          <Pressable accessibilityRole="button" style={s.wordRow} onPress={() => router.push('/collection')}><Text style={s.wordText}>곳간 꾸미기 · 낱말 도감</Text></Pressable>
+          <Pressable accessibilityRole="button" style={s.wordRow} onPress={() => router.push('/collection')}><Text style={s.wordText}>곳간 꾸미기 · 낱말 도감</Text><Text style={s.decoCount}>장식 {save.decorations.unlocked.length}/{DECORATION_IDS.length}</Text>{newDecos > 0 && <View style={s.newPill} accessibilityLabel={`새 장식 ${newDecos}개`}><Text style={s.newPillText}>NEW {newDecos}</Text></View>}</Pressable>
           <Animated.View entering={enterUp(2)}>
             <PressableScale onPress={openChallenge} haptic={haptic} style={s.challenge} accessibilityRole="button">
               <View style={s.seal}><Text style={s.sealText} maxFontSizeMultiplier={1.2}>오늘</Text></View>
@@ -425,6 +427,23 @@ const s = StyleSheet.create({
     fontSize: 26,
     color: C.grain,
     fontWeight: '300'
+  },
+  decoCount: {
+    marginLeft: 'auto',
+    fontSize: 13,
+    color: C.sub,
+    fontWeight: '700'
+  },
+  newPill: {
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: R.pill,
+    backgroundColor: C.accent
+  },
+  newPillText: {
+    fontSize: 11,
+    color: C.paper,
+    fontWeight: '800'
   },
   wordRow: {
     ...paperCard,

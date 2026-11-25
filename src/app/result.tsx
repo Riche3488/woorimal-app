@@ -15,7 +15,9 @@ import { useGame } from '../state/GameProvider';
 import { resultAction } from '../core/result-actions';
 import { dailyProgress } from '../core/activity';
 import { addDays } from '../core/growth';
-import { DECORATIONS } from '../core/decorations';
+import { DECORATIONS, RARITY_LABEL, newDecorations } from '../core/decorations';
+import { Image } from 'expo-image';
+import { ART } from '../../assets/art';
 import { DUR, EASE, enterUp } from '../ui/motion';
 import { goHome } from '../ui/navigation';
 import { C, elevation, paperCard, R, T } from '../ui/theme';
@@ -30,6 +32,8 @@ export default function Result() {
     toggleStar
   } = game;
   const [showWrong, setShowWrong] = useState(false);
+  // 도감에서 확인하기 전까지는 새 장식으로 보인다(결과 화면만 봐서는 확인한 것으로 치지 않는다).
+  const freshDecos = newDecorations(save);
   const outcome = save.lastOutcome;
   const beforeGrains = outcome?.beforeGrains ?? previousSave?.totalGrains ?? 0;
   const afterGrains = outcome?.afterGrains ?? save.totalGrains;
@@ -131,8 +135,17 @@ export default function Result() {
         <View style={s.wrongCard}><Text style={s.wrongPrompt}>{daily.complete ? '오늘 목표 달성! 내일 또 만나요' : `오늘 학습 ${daily.learned}/5개`}</Text><Text style={{
           color: C.sub
         }}>내일 복습 {tomorrow}개</Text>
-          {save.decorations.unlocked.length > 0 && <Pressable accessibilityRole="button" onPress={() => router.push('/collection')}><Text style={s.link}>현재 장식 확인 · {save.decorations.unlocked.map(id => DECORATIONS[id].name).join(', ')}</Text></Pressable>}
         </View>
+        {freshDecos.length > 0 && <Pop trigger={freshDecos.join()}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`새 장식을 얻었어요: ${freshDecos.map(id => DECORATIONS[id].name).join(', ')}. 눌러서 곳간 꾸미기`} onPress={() => router.push('/collection')} style={s.decoCard}>
+              <View style={s.decoThumbs}>{freshDecos.slice(0, 3).map(id => <Image key={id} source={ART.decoration[id]} style={s.decoThumb} contentFit="contain" accessible={false} />)}</View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={s.decoTitle}>새 장식을 얻었어요!</Text>
+                <Text style={s.decoNames}>{freshDecos.map(id => `${DECORATIONS[id].name}(${RARITY_LABEL[DECORATIONS[id].rarity]})`).join(' · ')}</Text>
+                <Text style={s.link}>곳간에 놓으러 가기 ›</Text>
+              </View>
+            </Pressable>
+          </Pop>}
         {wrong.length > 0 && <Pressable onPress={() => setShowWrong(v => !v)} hitSlop={8}>
             <Text style={s.link}>{showWrong ? '틀린 문제 접기' : `틀린 문제 보기 (${wrong.length})`}</Text>
           </Pressable>}
@@ -192,6 +205,32 @@ function Stat({
     </View>;
 }
 const s = StyleSheet.create({
+  decoCard: {
+    ...paperCard,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderColor: C.grain,
+    borderWidth: 2
+  },
+  decoThumbs: {
+    flexDirection: 'row'
+  },
+  decoThumb: {
+    width: 52,
+    height: 52,
+    marginRight: -10
+  },
+  decoTitle: {
+    ...T.heading,
+    color: C.accent
+  },
+  decoNames: {
+    fontSize: 13,
+    color: C.ink,
+    lineHeight: 19
+  },
   screen: {
     flex: 1,
     backgroundColor: C.bg

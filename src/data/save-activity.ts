@@ -1,6 +1,6 @@
 import { addDays, localDay } from '../core/growth';
 import type { SaveData } from './save';
-import { DECORATIONS, type DecorationId } from '../core/decorations';
+import { DECORATIONS, SLOTS, emptySlots, type DecorationId } from '../core/decorations';
 import type { RewardEntry } from '../core/rewards';
 export function readLearningState(raw: any, now: Date): Pick<SaveData, 'activity' | 'rewardLedger' | 'discoveries' | 'activityVersion' | 'decorations'> {
   const today = localDay(now),
@@ -42,7 +42,13 @@ export function readLearningState(raw: any, now: Date): Pick<SaveData, 'activity
     };
   }
   const unlocked: DecorationId[] = Array.isArray(raw.decorations?.unlocked) ? [...new Set(raw.decorations.unlocked.filter((id: unknown) => typeof id === 'string' && Object.hasOwn(DECORATIONS, id)))] as DecorationId[] : [];
-  const equipped = unlocked.includes(raw.decorations?.equipped) ? raw.decorations.equipped : null;
+  // 예전 저장은 장식 하나(문자열)만 장착했고 '확인함' 목록이 없었다 → 첫 자리로 옮기고, 이미 얻은 장식은 확인한 것으로 본다.
+  const rawEquipped: unknown[] = Array.isArray(raw.decorations?.equipped) ? raw.decorations.equipped : [raw.decorations?.equipped];
+  const equipped = emptySlots();
+  rawEquipped.slice(0, SLOTS).forEach((id, i) => {
+    if (unlocked.includes(id as DecorationId) && !equipped.includes(id as DecorationId)) equipped[i] = id as DecorationId;
+  });
+  const seen: DecorationId[] = Array.isArray(raw.decorations?.seen) ? unlocked.filter(id => raw.decorations.seen.includes(id)) : [...unlocked];
   return {
     activity,
     rewardLedger,
@@ -50,7 +56,8 @@ export function readLearningState(raw: any, now: Date): Pick<SaveData, 'activity
     activityVersion: 1,
     decorations: {
       unlocked,
-      equipped
+      equipped,
+      seen
     }
   };
 }

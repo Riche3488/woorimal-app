@@ -5,7 +5,7 @@ import { checkpointSession, commitSession, discardSession } from '../core/sessio
 import { createSession, policyFor, type SessionSnapshot } from '../core/session';
 import { recordExperienceEvent } from '../data/experience-events';
 import { finishCrosswordEntry } from '../data/save';
-import { syncDecorations, equipDecoration, type DecorationId } from '../core/decorations';
+import { syncDecorations, equipDecoration, unequipAll, markDecorationsSeen, type DecorationId } from '../core/decorations';
 import { seedDiscoveries } from '../core/collection';
 import { pickQuickRound } from '../core/quick-play';
 import { useToday } from './useToday';
@@ -32,7 +32,9 @@ export type Game = {
     finish(id: string): Promise<void>;
     discard(id: string): Promise<void>;
   };
-  equipDecoration?(id: DecorationId | null): void;
+  equipDecoration?(id: DecorationId): void; // 장착 중이면 빼고, 아니면 빈 자리에 놓는다
+  unequipDecorations?(): void;
+  markDecorationsSeen?(): void;
   today?: string;
   pack: AppPack;
   save: SaveData;
@@ -482,6 +484,12 @@ export function GameProvider({
     today,
     equipDecoration: id => {
       void persist(d => equipDecoration(d, id)).catch(() => {});
+    },
+    unequipDecorations: () => {
+      void persist(unequipAll).catch(() => {});
+    },
+    markDecorationsSeen: () => {
+      void persist(markDecorationsSeen).catch(() => {});
     },
     counts,
     lastRound,
