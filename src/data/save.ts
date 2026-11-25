@@ -17,6 +17,7 @@ import { emptyCrossword, isComplete } from '../core/crossword';
 import { readLearningState } from './save-activity';
 import { normalizeRecentAttempts } from '../core/progress';
 import type { DecorationState } from '../core/decorations';
+import { joinSave, mainText, PART_COUNT, PART_KEYS, splitParts } from './save-shards';
 export const SAVE_KEY = 'woorimal.save.v1';
 
 // choiceMode: 직접 입력하는 문제를 보기 4개 고르기로 푼다(src/core/choices.ts). 오늘의 문제는 모두에게 같아야 하므로 바꾸지 않는다.
@@ -252,7 +253,22 @@ export type SaveLoadResult = {
 } | {
   kind: 'io-error';
 };
-export async function loadSaveResult(): Promise<SaveLoadResult> {
+type RawSave = {
+  kind: 'missing';
+} | {
+  kind: 'io-error';
+} | {
+  kind: 'invalid';
+  raw: string;
+} | {
+  kind: 'data';
+  data: any;
+  raw: string;
+};
+
+// 본 키를 읽고, 나눈 저장(parts 표시)이면 조각까지 읽어 합친다(src/data/save-shards.ts).
+// 조각이 없거나 깨졌으면 본 키와 조각 원문을 함께 담아 손상으로 돌려준다(새로 시작할 때 그대로 보관한다).
+async function readRawSave(): Promise<RawSave> {
   let text: string | null;
   try {
     text = await AsyncStorage.getItem(SAVE_KEY);
@@ -262,11 +278,65 @@ export async function loadSaveResult(): Promise<SaveLoadResult> {
     };
   }
   if (text === null) return {
+    kind: 'missing'
+  };
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return {
+      kind: 'invalid',
+      raw: text
+    };
+  }
+  if (data?.parts === undefined) return {
+    kind: 'data',
+    data,
+    raw: text
+  };
+  let rows: readonly (readonly [string, string | null])[];
+  try {
+    rows = await AsyncStorage.multiGet(PART_KEYS);
+  } catch {
+    return {
+      kind: 'io-error'
+    };
+  }
+  const texts = PART_KEYS.map(k => rows.find(([key]) => key === k)?.[1] ?? null);
+  const raw = JSON.stringify({
+    main: text,
+    parts: texts
+  });
+  let parts: unknown[];
+  try {
+    parts = texts.map(t => t === null ? null : JSON.parse(t));
+  } catch {
+    return {
+      kind: 'invalid',
+      raw
+    };
+  }
+  const joined = data.parts === PART_COUNT ? joinSave(data, parts) : null;
+  return joined ? {
+    kind: 'data',
+    data: joined,
+    raw
+  } : {
+    kind: 'invalid',
+    raw
+  };
+}
+export async function loadSaveResult(): Promise<SaveLoadResult> {
+  const read = await readRawSave();
+  if (read.kind === 'io-error') return read;
+  if (read.kind === 'missing') return {
     kind: 'missing',
     save: defaultSave()
   };
+  if (read.kind === 'invalid') return read;
+  const text = read.raw;
   try {
-    const data = JSON.parse(text);
+    const data = read.data;
     if (data?.schema !== 1 || !Number.isFinite(data.totalGrains) || data.totalGrains < 0 || !data.progress?.stats || typeof data.progress.stats !== 'object') return {
       kind: 'invalid',
       raw: text
@@ -352,13 +422,53 @@ export async function loadSave(): Promise<SaveData> {
   const result = await loadSaveResult();
   return 'save' in result ? result.save : defaultSave();
 }
-// 깨진 저장은 지우지 않고 다른 키에 그대로 옮겨 둔 뒤 비운다. 옮기기에 실패하면 원본을 건드리지 않는다.
+const BROKEN_PREFIX = `${SAVE_KEY}.broken.`;
+const BROKEN_KEEP = 2; // 깨진 저장 보관본은 최근 것만 남긴다(기기 저장 한도 6MB를 채우지 않게)
+
+// 깨진 저장은 지우지 않고 다른 키에 그대로 옮겨 둔 뒤 비운다(조각 포함). 옮기기에 실패하면 원본을 건드리지 않는다.
 export async function backupBrokenSave(raw: string, now = Date.now()): Promise<void> {
-  await AsyncStorage.setItem(`${SAVE_KEY}.broken.${now}`, raw);
-  await AsyncStorage.removeItem(SAVE_KEY);
+  await AsyncStorage.setItem(`${BROKEN_PREFIX}${now}`, raw);
+  await AsyncStorage.multiRemove([SAVE_KEY, ...PART_KEYS]);
+  try {
+    const old = (await AsyncStorage.getAllKeys()).filter(k => k.startsWith(BROKEN_PREFIX)).sort((a, b) => Number(a.slice(BROKEN_PREFIX.length)) - Number(b.slice(BROKEN_PREFIX.length)));
+    if (old.length > BROKEN_KEEP) await AsyncStorage.multiRemove(old.slice(0, old.length - BROKEN_KEEP));
+  } catch {
+    // 오래된 보관본을 못 지워도 새로 시작은 된다.
+  }
 }
-export async function writeSave(d: SaveData): Promise<void> {
-  await AsyncStorage.setItem(SAVE_KEY, JSON.stringify(d));
+
+// 저장 쓰기 함수를 만든다. 마지막으로 쓴 값을 기억해 바뀐 조각과 본 키만 쓴다(정답 하나마다 전체를 다시 쓰지 않게).
+// 조각을 먼저, 본 키를 마지막에 한 번의 multiSet으로 쓴다. Android에서는 한 트랜잭션이라 함께 저장되거나 함께 실패한다.
+// 바뀌지 않은 조각은 기록 객체가 그대로(같은 참조)이므로 다시 JSON으로 만들지 않는다.
+export function createSaveWriter(): (d: SaveData) => Promise<void> {
+  const written = new Map<string, string>();
+  const memo: {
+    refs: unknown[];
+    text: string;
+  }[] = [];
+  return async d => {
+    const pairs: [string, string][] = [];
+    splitParts(d).forEach((part, i) => {
+      const refs = [...Object.keys(part.s), ...Object.values(part.s), null, ...Object.keys(part.d), ...Object.values(part.d)];
+      const m = memo[i];
+      const text = m && m.refs.length === refs.length && m.refs.every((r, j) => r === refs[j]) ? m.text : JSON.stringify(part);
+      memo[i] = {
+        refs,
+        text
+      };
+      if (written.get(PART_KEYS[i]) !== text) pairs.push([PART_KEYS[i], text]);
+    });
+    const main = mainText(d);
+    if (written.get(SAVE_KEY) !== main) pairs.push([SAVE_KEY, main]);
+    if (!pairs.length) return;
+    await AsyncStorage.multiSet(pairs);
+    for (const [k, v] of pairs) written.set(k, v);
+  };
+}
+
+// 한 번에 전부 쓴다(앱은 createSaveWriter로 바뀐 것만 쓴다).
+export function writeSave(d: SaveData): Promise<void> {
+  return createSaveWriter()(d);
 }
 export type { RoundMode } from '../core/session';
 import type { RoundMode } from '../core/session';

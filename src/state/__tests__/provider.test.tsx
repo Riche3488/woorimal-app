@@ -51,7 +51,7 @@ function Probe() {
 test('one_retry_preserves_two_failed_star_actions_in_order', async () => {
   await AsyncStorage.clear();
   await render(<GameProvider><Probe /></GameProvider>);
-  (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('disk')).mockRejectedValueOnce(new Error('disk'));
+  (AsyncStorage.multiSet as jest.Mock).mockRejectedValueOnce(new Error('disk')).mockRejectedValueOnce(new Error('disk'));
   await act(async () => {
     game.toggleStar('spelling:1');
     game.toggleStar('spelling:2');
@@ -79,7 +79,7 @@ test.each(['card', 'puzzle'])('%s_retry_after_midnight_keeps_the_submission_day'
     jest.setSystemTime(new Date(2026, 10, 22, 23, 59));
     await AsyncStorage.clear();
     await render(<GameProvider><Probe /></GameProvider>);
-    (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('disk'));
+    (AsyncStorage.multiSet as jest.Mock).mockRejectedValueOnce(new Error('disk'));
     await act(async () => {
       if (source === 'card') await Promise.resolve(game.answerCard(cardAnswer)).catch(() => {});else await Promise.resolve(game.updateCrossword('time-board', {
         solved: [0],
@@ -119,7 +119,7 @@ test('global_retry_of_failed_completion_restores_result_without_recording_twice'
   await act(async () => {
     await game.sessions!.checkpoint(s);
   });
-  (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('disk'));
+  (AsyncStorage.multiSet as jest.Mock).mockRejectedValueOnce(new Error('disk'));
   await act(async () => {
     await expect(game.sessions!.finish(s.id)).rejects.toThrow('disk');
   });
@@ -141,7 +141,7 @@ test('successful_session_retry_clears_the_same_global_save_error', async () => {
     input: '가',
     answeredAt: Date.now()
   });
-  (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('disk'));
+  (AsyncStorage.multiSet as jest.Mock).mockRejectedValueOnce(new Error('disk'));
   await act(async () => {
     await expect(game.sessions!.checkpoint(s)).rejects.toThrow('disk');
   });

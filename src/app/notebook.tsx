@@ -51,7 +51,7 @@ export default function Notebook() {
   } : null;
   return <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.back}>‹ 뒤로</Text></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button"><Text style={s.back}>‹ 뒤로</Text></Pressable>
         <Text style={s.title}>오답노트</Text>
         <View style={{
         width: 48

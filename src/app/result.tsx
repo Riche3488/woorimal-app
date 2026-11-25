@@ -90,7 +90,7 @@ export default function Result() {
         day: context.day,
         marks: save.challengeHistory[context.day] ?? save.challenge.marks,
         streak: currentStreak(save.streak, today)
-      }) + `\n묶음 ${context.packVersion} · 규칙 ${context.rulesVersion}`
+      })
     }).catch(() => {});
   };
   const rate = total ? correct / total : 0;

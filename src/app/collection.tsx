@@ -24,7 +24,7 @@ export default function Collection() {
   const opened = list.find(w => w.word === open);
   return <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.back}>‹ 뒤로</Text></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button"><Text style={s.back}>‹ 뒤로</Text></Pressable>
         <Text style={s.title}>곳간 낱말</Text>
         <View style={{
         width: 48

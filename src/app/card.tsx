@@ -67,7 +67,7 @@ export default function CardScreen() {
   };
   return <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.back}>‹ 뒤로</Text></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button"><Text style={s.back}>‹ 뒤로</Text></Pressable>
         <Text style={s.title}>오늘의 낱말</Text>
         <View style={{
         width: 48

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AppState, Pressable, Text, View } from 'react-native';
+import { AppState, View } from 'react-native';
+import { LoadErrorScreen, Notice, NoticeStack } from '../components/StorageNotices';
 import { createSaveStore, type SaveStore } from '../data/save-store';
 import { checkpointSession, commitSession, discardSession } from '../core/session-commit';
 import { createSession, policyFor, type SessionSnapshot } from '../core/session';
@@ -24,7 +25,7 @@ import { loadPack, refreshPack } from '../data/pack-store';
 import { replaceOwnedReminders } from '../data/reminder';
 import type { CrosswordProgress } from '../core/crossword';
 import { makeCrossword, type MadeLevel } from '../core/crossword-make';
-import { addMadeCrossword, backupBrokenSave, defaultSave, finishCard, loadSaveResult, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
+import { addMadeCrossword, backupBrokenSave, createSaveWriter, defaultSave, finishCard, loadSaveResult, toggleStarSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 export type Game = {
   sessions?: {
     begin(mode: RoundMode, type?: QuestionType, count?: number): Promise<SessionSnapshot>;
@@ -217,7 +218,7 @@ export function GameProvider({
         kind: 'reward_unlocked'
       }).catch(() => {});
       setLoadError(null);
-      store.current = createSaveStore(s, writeSave);
+      store.current = createSaveStore(s, createSaveWriter());
       setPack(p);
       setSave(s);
       if (s.lastOutcome) {
@@ -465,25 +466,13 @@ export function GameProvider({
       sub.remove();
     };
   }, [ready, reminder, reminderHour, reminderFrequency, reminderAttempt]);
-  if (loadError) return <View style={{
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-    gap: 16
-  }}>
-    <Text>{loadError.kind === 'pack' ? '문제를 불러오지 못했어요. 앱을 다시 열거나 업데이트해 주세요.' : '기록을 불러오지 못했어요. 저장된 기록을 덮어쓰지 않았어요.'}</Text>
-    <Pressable accessibilityRole="button" onPress={() => setLoadAttempt(n => n + 1)}><Text>다시 시도</Text></Pressable>
-    {loadError.kind === 'broken' && <>
-      <Text>기록이 손상되어 읽을 수 없어요. 새로 시작하면 손상된 기록은 기기 안에 따로 보관해 둬요.</Text>
-      <Pressable accessibilityRole="button" onPress={() => {
-        void backupBrokenSave(loadError.raw).then(() => {
-          setResetError(false);
-          setLoadAttempt(n => n + 1);
-        }).catch(() => setResetError(true));
-      }}><Text>새로 시작하기</Text></Pressable>
-      {resetError && <Text accessibilityRole="alert">새로 시작하지 못했어요. 기기 저장 공간을 확인해 주세요.</Text>}
-    </>}
-  </View>;
+  if (loadError) return <LoadErrorScreen kind={loadError.kind} resetError={resetError} onRetry={() => setLoadAttempt(n => n + 1)} onReset={() => {
+    if (loadError.kind !== 'broken') return;
+    void backupBrokenSave(loadError.raw).then(() => {
+      setResetError(false);
+      setLoadAttempt(n => n + 1);
+    }).catch(() => setResetError(true));
+  }} />;
   if (!ready || !pack) return <>{fallback}</>;
   return <GameContext.Provider value={{
     pack,
@@ -512,15 +501,16 @@ export function GameProvider({
     updateSettings,
     resetRecords
   }}>
-      {writeError && <View accessibilityRole="alert" style={{
-      padding: 16,
-      backgroundColor: '#FFF0D0'
-    }}><Text>저장하지 못했어요</Text><Pressable accessibilityRole="button" onPress={() => {
-        void drainWrites().catch(() => {});
-      }}><Text>다시 시도</Text></Pressable></View>}
-      {reminderError && <View accessibilityRole="alert" style={{
-      padding: 12
-    }}><Text>기기에 알림을 예약하지 못했어요</Text><Pressable accessibilityRole="button" onPress={() => setReminderAttempt(n => n + 1)}><Text>다시 예약</Text></Pressable></View>}
-      {children}
+      <View style={{
+      flex: 1
+    }}>
+        {children}
+        {(writeError || reminderError) && <NoticeStack>
+            {writeError && <Notice message="저장하지 못했어요" action="다시 시도" onPress={() => {
+            void drainWrites().catch(() => {});
+          }} />}
+            {reminderError && <Notice message="기기에 알림을 예약하지 못했어요" action="다시 예약" onPress={() => setReminderAttempt(n => n + 1)} />}
+          </NoticeStack>}
+      </View>
     </GameContext.Provider>;
 }

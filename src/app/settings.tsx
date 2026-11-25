@@ -45,7 +45,7 @@ export default function Settings() {
   }]);
   return <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.back}>‹ 뒤로</Text></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button"><Text style={s.back}>‹ 뒤로</Text></Pressable>
         <Text style={s.title}>설정</Text>
         <View style={{
         width: 48
@@ -101,7 +101,7 @@ export default function Settings() {
               checked: (save.settings.reminderFrequency ?? 'daily') === option.id
             }} onPress={() => updateSettings({
               reminderFrequency: option.id
-            })} style={s.hour}><Text style={s.hourText}>{option.label}</Text></Pressable>)}</View><View style={s.hours}>
+            })} style={[s.hour, (save.settings.reminderFrequency ?? 'daily') === option.id && s.hourOn]}><Text style={[s.hourText, (save.settings.reminderFrequency ?? 'daily') === option.id && s.hourTextOn]}>{option.label}</Text></Pressable>)}</View><View style={s.hours}>
               {REMINDER_HOURS.map(h => <Pressable key={h} onPress={() => updateSettings({
               reminderHour: h
             })} accessibilityRole="button" accessibilityState={{
@@ -115,7 +115,10 @@ export default function Settings() {
           flexShrink: 1
         }}><Text style={s.label}>정답 자동 넘김</Text><Text style={s.desc}>정답은 3초 뒤 넘어가요. 해설을 펼치거나 별을 누르면 멈춰요.</Text></View><Switch accessibilityLabel="정답 자동 넘김" value={save.settings.autoAdvanceCorrect ?? false} onValueChange={autoAdvanceCorrect => updateSettings({
           autoAdvanceCorrect
-        })} /></View>
+        })} trackColor={{
+          true: C.grain,
+          false: C.line
+        }} /></View>
         <DiagnosticsSettings />
         {TEST_MODE_OK && <View style={s.row}><View style={{
           flexShrink: 1

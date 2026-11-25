@@ -59,7 +59,7 @@ export default function Puzzle() {
   };
   if (!board || !grid) {
     return <SafeAreaView style={s.screen}>
-        <Pressable onPress={() => router.back()} style={s.headerPad}><Text style={s.back}>‹ 뒤로</Text></Pressable>
+        <Pressable onPress={() => router.back()} style={s.headerPad} accessibilityRole="button"><Text style={s.back}>‹ 뒤로</Text></Pressable>
         <Text style={s.empty}>퍼즐을 찾을 수 없어요</Text>
       </SafeAreaView>;
   }
@@ -139,7 +139,7 @@ export default function Puzzle() {
   })).filter(x => x.e.dir === dir).sort((a, b) => a.e.num - b.e.num);
   return <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.back}>‹ 뒤로</Text></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button"><Text style={s.back}>‹ 뒤로</Text></Pressable>
         <Text style={s.title} numberOfLines={1}>{board.theme}</Text>
         <Text style={s.level}>{LEVEL_LABELS[board.level]}</Text>
       </View>

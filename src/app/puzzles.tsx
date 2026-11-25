@@ -48,7 +48,7 @@ export default function Puzzles() {
   return (
     <SafeAreaView style={s.screen}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.back}>‹ 뒤로</Text></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button"><Text style={s.back}>‹ 뒤로</Text></Pressable>
         <Text style={s.title}>가로세로 퍼즐</Text>
         <View style={{ width: 48 }} />
       </View>
