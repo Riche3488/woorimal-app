@@ -1,4 +1,5 @@
 import { grade } from './grading';
+import { validQuestion } from './pack';
 import { answer, beginQuestion, canSubmit, giveUp, isOver, startRound, timeout, type Round } from './round';
 import { timeLimitMs } from './timing';
 import type { AnswerInput, AppQuestion, QuestionType } from './types';
@@ -201,19 +202,7 @@ export function parseSession(raw: unknown): SessionSnapshot | null {
   const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
   const nonneg = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
   const integer = (v: unknown): v is number => nonneg(v) && Number.isSafeInteger(v);
-  const strings = (v: unknown, min = 0): v is string[] => Array.isArray(v) && v.length >= min && v.every(x => typeof x === 'string');
   const types = ['meaning', 'usage', 'spacing', 'spelling', 'proverb', 'chosung', 'broadcast'];
-  const question = (q: unknown): q is AppQuestion => {
-    if (!object(q) || typeof q.key !== 'string' || !q.key || typeof q.answer !== 'string' || typeof q.prompt !== 'string' || typeof q.explain !== 'string' || !types.includes(q.type as string) || !['kbs', 'original', 'blog', 'adapted'].includes(q.source as string) || typeof q.easy !== 'boolean') return false;
-    if (q.label !== undefined && typeof q.label !== 'string') return false;
-    if (q.level !== undefined && !['normal', 'hard'].includes(q.level as string)) return false;
-    if (q.synonyms !== undefined && !strings(q.synonyms)) return false;
-    if (q.hint !== undefined && (!object(q.hint) || typeof q.hint.chosung !== 'string' || !integer(q.hint.syllables))) return false;
-    for (const field of ['choices', 'answers', 'syllables']) if (q[field] !== undefined && !strings(q[field])) return false;
-    if (q.kind === 'choice') return strings(q.choices, 2) && q.choices.includes(q.answer);
-    if (q.kind === 'spacing') return strings(q.syllables, 1) && strings(q.answers, 1);
-    return q.kind === 'typed';
-  };
   if (!object(raw)) return null;
   const s = raw as unknown as SessionSnapshot;
   const r = s.round,
@@ -223,7 +212,7 @@ export function parseSession(raw: unknown): SessionSnapshot | null {
   if (c.practiceType !== undefined && !types.includes(c.practiceType)) return null;
   if (c.count !== undefined && (!integer(c.count) || c.count < 1 || c.count > 10)) return null;
   if (!object(p) || typeof p.timed !== 'boolean' || typeof p.retry !== 'boolean' || !(p.hearts === null || integer(p.hearts) && p.hearts > 0) || ![null, 3000].includes(p.autoAdvanceCorrectMs) || !['legacy-v1', 'learning-v2'].includes(p.rewardPolicy)) return null;
-  if (!object(r) || !Array.isArray(r.questions) || !r.questions.length || r.questions.length > 100 || !r.questions.every(question) || !integer(r.index) || r.index > r.questions.length || !Array.isArray(r.results) || r.results.length !== r.index) return null;
+  if (!object(r) || !Array.isArray(r.questions) || !r.questions.length || r.questions.length > 100 || !r.questions.every(validQuestion) || !integer(r.index) || r.index > r.questions.length || !Array.isArray(r.results) || r.results.length !== r.index) return null;
   if (!r.results.every((v, i) => object(v) && v.key === r.questions[i].key && v.type === r.questions[i].type && (['correct', 'timedOut', 'gaveUp', 'synonymHit'] as const).every(f => typeof v[f] === 'boolean') && !(v.correct && (v.timedOut || v.gaveUp)) && typeof v.userAnswer === 'string' && nonneg(v.elapsedMs) && integer(v.grains) && (v.answeredAt === undefined || nonneg(v.answeredAt)))) return null;
   if (!(r.hearts === null || integer(r.hearts)) || !integer(r.grains) || !nonneg(r.startedAt) || !integer(r.streak)) return null;
   if (r.policy !== undefined && (!object(r.policy) || r.policy.timed !== p.timed)) return null;

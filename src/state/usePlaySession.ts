@@ -89,8 +89,11 @@ export function usePlaySession(initial: SessionSnapshot, checkpoint?: (s: Sessio
       sessionId: next.id,
       index: next.round.index - 1
     }).catch(() => {});
-    if (mounted.current) setSession(next);
-    if (action.kind === 'tick' && next.phase === prev.phase) return;
+    // 같은 단계 안의 시계 진행은 기록(current)에만 쌓는다. 화면에 보이는 건 시간제 문제의 남은 시간뿐이라
+    // 그때만 다시 그린다(입력 중 0.1초마다 다시 그리면 한글 조합이 버벅인다).
+    const quietTick = action.kind === 'tick' && next.phase === prev.phase;
+    if (mounted.current && !(quietTick && !(next.policy.timed && next.phase === 'question'))) setSession(next);
+    if (quietTick) return;
     if (draftTimer.current) clearTimeout(draftTimer.current);
     if (action.kind === 'draft') {
       draftTimer.current = setTimeout(() => {

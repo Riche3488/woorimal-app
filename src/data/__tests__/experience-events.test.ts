@@ -40,3 +40,14 @@ test('explicit_clear_keeps_consent_but_removes_events', async () => {
     events: []
   });
 });
+test('disabled_events_skip_storage_reads', async () => {
+  await setExperienceDiagnostics(false);
+  (AsyncStorage.getItem as jest.Mock).mockClear();
+  (AsyncStorage.setItem as jest.Mock).mockClear();
+  for (const id of ['a', 'b', 'c']) await recordExperienceEvent({ id, at: Date.now(), kind: 'session_started' });
+  expect(AsyncStorage.getItem).not.toHaveBeenCalled();
+  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  await setExperienceDiagnostics(true);
+  await recordExperienceEvent({ id: 'd', at: Date.now(), kind: 'session_started' });
+  expect(JSON.parse(await exportExperienceDiagnostics()).events).toHaveLength(1);
+});

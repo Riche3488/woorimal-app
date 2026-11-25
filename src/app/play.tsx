@@ -8,6 +8,7 @@ import type { RoundMode } from '../core/session';
 import type { AppQuestion, QuestionType } from '../core/types';
 import { APP_VERSION, TEST_MODE_OK } from '../data/build';
 import { useGame } from '../state/GameProvider';
+import { goHome } from '../ui/navigation';
 import { C } from '../ui/theme';
 const MODES = ['normal', 'review', 'starred', 'practice', 'challenge', 'quick'];
 export default function Play() {
@@ -38,7 +39,7 @@ export default function Play() {
     const requestedCount = Number(count);
     void game.sessions.begin(roundMode, validType, Number.isInteger(requestedCount) && requestedCount > 0 ? Math.min(10, requestedCount) : undefined).then(() => setAccepted(true)).catch(error => setMessage(error.message));
   }, [game.sessions, session, mode, type]);
-  const home = () => router.replace('/');
+  const home = goHome;
   const report = (q: AppQuestion) => {
     void Linking.openURL(reportUrl(q, session?.context.packVersion ?? game.pack.version, APP_VERSION)).catch(() => Alert.alert('신고 화면을 열 수 없어요', '인터넷 연결을 확인해 주세요.'));
   };

@@ -103,16 +103,10 @@ function game(crosswords: Record<string, CrosswordProgress> = {}, updateCrosswor
     lastMode: 'normal',
     previousSave: null,
     lastPracticeType: null,
-    startNormal: jest.fn(),
-    startReview: jest.fn(),
-    startStarred: jest.fn(),
-    startPractice: jest.fn(),
-    startChallenge: jest.fn(),
     toggleStar: jest.fn(),
-    complete: jest.fn(),
     answerCard: jest.fn(),
     updateCrossword,
-    makePuzzle: jest.fn(() => 'made-2'),
+    makePuzzle: jest.fn(async () => 'made-2'),
     updateSettings: jest.fn(),
     resetRecords: jest.fn(),
     ...extra
@@ -341,7 +335,7 @@ describe('초성 보기 찬스(하루 한 번)', () => {
 });
 describe('조합 퍼즐', () => {
   test('목록에 만든 판이 보이고, 새 판을 만들면 그 판으로 간다', async () => {
-    const makePuzzle = jest.fn(() => 'made-2');
+    const makePuzzle = jest.fn(async () => 'made-2');
     await show(<Puzzles />, game({}, jest.fn(), {
       makePuzzle
     }, [made]));
@@ -357,9 +351,31 @@ describe('조합 퍼즐', () => {
     await fireEvent.press(screen.getByText('보통 새 판'));
     expect(makePuzzle).toHaveBeenCalledWith('normal');
   });
+  test('새 판은 저장이 끝난 뒤에 연다(저장 전에 열면 퍼즐을 찾을 수 없다)', async () => {
+    let finish!: (id: string | null) => void;
+    const makePuzzle = jest.fn(() => new Promise<string | null>(resolve => {
+      finish = resolve;
+    }));
+    await show(<Puzzles />, game({}, jest.fn(), {
+      makePuzzle
+    }));
+    await fireEvent.press(screen.getByText('쉬움 새 판'));
+    await fireEvent.press(screen.getByText('쉬움 새 판'));
+    expect(makePuzzle).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+    await act(async () => {
+      finish('made-2');
+    });
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/puzzle',
+      params: {
+        id: 'made-2'
+      }
+    });
+  });
   test('못 만들면 알린다', async () => {
     await show(<Puzzles />, game({}, jest.fn(), {
-      makePuzzle: jest.fn(() => null)
+      makePuzzle: jest.fn(async () => null)
     }));
     await fireEvent.press(screen.getByText('쉬움 새 판'));
     expect(mockPush).not.toHaveBeenCalled();

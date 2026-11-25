@@ -13,8 +13,19 @@ const SOURCES = new Set(['kbs', 'original', 'blog', 'adapted']);
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isStrList = (v: unknown, min = 1): v is string[] => Array.isArray(v) && v.length >= min && v.every(isStr);
 
-function validQuestion(q: any): q is AppQuestion {
-  if (!q || !isStr(q.key) || !isStr(q.answer) || !TYPES.has(q.type) || !SOURCES.has(q.source)) return false;
+const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
+const isCount = (v: unknown) => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+
+// 문제 한 개 검사. 묶음을 받을 때와 저장된 판(parseSession)을 다시 읽을 때 같은 규칙을 쓴다.
+// 둘이 다르면 묶음은 받았는데 그 문제로 만든 판이 다음 실행 때 깨진 판으로 격리된다.
+export function validQuestion(q: unknown): q is AppQuestion {
+  if (!isObj(q) || !isStr(q.key) || !q.key || !isStr(q.answer) || !isStr(q.prompt) || !isStr(q.explain)) return false;
+  if (!TYPES.has(q.type) || !SOURCES.has(q.source) || typeof q.easy !== 'boolean') return false;
+  if (q.label !== undefined && !isStr(q.label)) return false;
+  if (q.level !== undefined && q.level !== 'normal' && q.level !== 'hard') return false;
+  if (q.synonyms !== undefined && !isStrList(q.synonyms, 0)) return false;
+  if (q.hint !== undefined && (!isObj(q.hint) || !isStr(q.hint.chosung) || !isCount(q.hint.syllables))) return false;
+  for (const field of ['choices', 'answers', 'syllables']) if (q[field] !== undefined && !isStrList(q[field], 0)) return false;
   switch (q.kind) {
     case 'choice': return isStrList(q.choices, 2) && q.choices.includes(q.answer);
     case 'spacing': return isStrList(q.answers) && isStrList(q.syllables);

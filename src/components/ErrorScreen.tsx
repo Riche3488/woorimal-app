@@ -1,5 +1,5 @@
 // 화면에서 예외가 나면 앱을 끄는 대신 보이는 화면(expo-router ErrorBoundary). 기록은 기기에 남아 있다.
-import { router } from 'expo-router';
+import { goHome } from '../ui/navigation';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { C, T } from '../ui/theme';
 type Props = {
@@ -10,7 +10,7 @@ export function ErrorScreen({
   retry
 }: Props) {
   const home = () => {
-    router.replace('/');
+    goHome();
     void retry();
   };
   return <View style={s.screen}>

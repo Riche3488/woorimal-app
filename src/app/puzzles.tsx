@@ -1,7 +1,7 @@
 // 가로세로 퍼즐 목록: 주제·난이도·진행(푼 낱말 수, 완성).
 // 조합 퍼즐: 문제의 낱말을 엮어 새 판을 만들고(쉬움·보통), 만든 판은 새것부터 보여 준다.
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CROSSWORD_LEVELS as LEVEL_LABELS, emptyCrossword, isComplete } from '../core/crossword';
@@ -17,10 +17,18 @@ export default function Puzzles() {
   const boards = [...(pack.crosswords ?? [])].sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || a.id.localeCompare(b.id));
   const [failed, setFailed] = useState(false);
   const open = (id: string) => router.push({ pathname: '/puzzle', params: { id } });
-  const make = (level: MadeLevel) => {
-    const id = makePuzzle(level);
-    setFailed(!id);
-    if (id) open(id);
+  // 저장이 끝난 뒤에 연다. 먼저 열면 퍼즐 화면이 아직 없는 판을 찾지 못한다. 두 번 눌러도 한 판만 만든다.
+  const making = useRef(false);
+  const make = async (level: MadeLevel) => {
+    if (making.current) return;
+    making.current = true;
+    try {
+      const id = await makePuzzle(level);
+      setFailed(!id);
+      if (id) open(id);
+    } finally {
+      making.current = false;
+    }
   };
   const row = (b: AppCrossword) => {
     const p = save.crosswords[b.id] ?? emptyCrossword();
@@ -53,7 +61,7 @@ export default function Puzzles() {
         <Text style={s.help}>여러 문제의 낱말을 엮어 새 판을 만들어요. 앞서 만든 판의 낱말은 되도록 피해요</Text>
         <View style={s.makeRow}>
           {(['easy', 'normal'] as const).map(level => (
-            <Pressable key={level} onPress={() => make(level)} accessibilityRole="button"
+            <Pressable key={level} onPress={() => void make(level)} accessibilityRole="button"
               style={({ pressed }) => [s.make, pressed && { opacity: 0.7 }]}>
               <Text style={s.makeText}>{LEVEL_LABELS[level]} 새 판</Text>
             </Pressable>

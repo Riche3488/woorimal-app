@@ -1,7 +1,6 @@
 // 기기 알림 예약(expo-notifications). 앱 소유의 반복 예약을 유지하며 서버 푸시는 쓰지 않는다.
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
-import type { planReminder } from '../core/reminder';
 import { REMINDER_OWNER, REMINDER_TITLE, type ReminderPlan } from '../core/reminder';
 const CHANNEL = 'reminder';
 
@@ -37,25 +36,6 @@ export async function requestReminderPermission(): Promise<boolean> {
   return (await Notifications.requestPermissionsAsync()).granted;
 }
 
-// plan이 null이면 예약을 모두 지운다(알림 끔).
-export async function scheduleReminder(plan: ReturnType<typeof planReminder> | null): Promise<void> {
-  if (!Notifications) return;
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  if (!plan) return;
-  if (!(await Notifications.getPermissionsAsync()).granted) return;
-  await ensureChannel();
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: plan.title,
-      body: plan.body
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: plan.at,
-      channelId: CHANNEL
-    }
-  });
-}
 let scheduleTail: Promise<unknown> = Promise.resolve();
 export function replaceOwnedReminders(plans: ReminderPlan[]): Promise<void> {
   if (!Notifications) return Promise.resolve();

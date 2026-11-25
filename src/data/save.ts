@@ -315,6 +315,7 @@ export async function loadSaveResult(): Promise<SaveLoadResult> {
         settings: {
           ...base.settings,
           ...data.settings,
+          // 일부러 기본값(true)을 쓰지 않는다: 보기로 풀기가 생기기 전 저장은 직접 입력으로 풀던 사람이라 그대로 둔다.
           choiceMode: data.settings?.choiceMode === true
         },
         activeSession: active ? {

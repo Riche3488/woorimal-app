@@ -32,6 +32,22 @@ describe('parsePack', () => {
 });
 
 describe('parsePack 안전장치', () => {
+  test('저장된 판을 다시 읽을 때 거절될 문제는 묶음에서부터 받지 않는다(이어 하기 기록 보호)', () => {
+    const bad = (patch: Record<string, unknown>, drop?: string) => {
+      const pack = makePack() as any;
+      pack.questions[0] = { ...pack.questions[0], ...patch };
+      if (drop) delete pack.questions[0][drop];
+      return pack;
+    };
+    expect(parsePack(bad({}, 'easy'))).toBeNull();
+    expect(parsePack(bad({}, 'prompt'))).toBeNull();
+    expect(parsePack(bad({}, 'explain'))).toBeNull();
+    expect(parsePack(bad({ key: '' }))).toBeNull();
+    expect(parsePack(bad({ level: 'easy' }))).toBeNull();
+    expect(parsePack(bad({ hint: { chosung: 'ㄱ' } }))).toBeNull();
+    expect(parsePack(bad({ synonyms: [1] }))).toBeNull();
+    expect(parsePack(bad({ level: 'hard', hint: { chosung: 'ㅅㄱㅈ', syllables: 3 }, synonyms: ['설거지'] }))).not.toBeNull();
+  });
   test('모르는 유형·출처, 겹치는 키는 거절', () => {
     const badType = makePack() as any; badType.questions[0].type = 'video';
     expect(parsePack(badType)).toBeNull();

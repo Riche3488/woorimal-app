@@ -1,30 +1,3 @@
-import * as Notifications from 'expo-notifications';
-import { scheduleReminder } from '../reminder';
-
-beforeEach(() => jest.clearAllMocks());
-
-test('알림을 끄면 예약을 지우기만 한다', async () => {
-  await scheduleReminder(null);
-  expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalledTimes(1);
-  expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-});
-
-test('예전 예약을 지우고 다음 한 번을 날짜로 예약한다', async () => {
-  const at = new Date('2026-11-20T19:00:00');
-  await scheduleReminder({ at, title: '우리말 곳간', body: '오늘 복습할 문제 4개가 기다려요' });
-  expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalled();
-  expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
-    content: { title: '우리말 곳간', body: '오늘 복습할 문제 4개가 기다려요' },
-    trigger: { type: 'date', date: at, channelId: 'reminder' },
-  });
-});
-
-test('권한이 없으면 예약하지 않는다', async () => {
-  (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: false, canAskAgain: true });
-  await scheduleReminder({ at: new Date(), title: 't', body: 'b' });
-  expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-});
-
 test('Expo Go에서는 expo-notifications를 불러오지 않고 알림을 끈다', async () => {
   jest.resetModules();
   jest.doMock('expo-constants', () => ({ __esModule: true, default: { executionEnvironment: 'storeClient' }, ExecutionEnvironment: { StoreClient: 'storeClient' } }));
@@ -32,7 +5,7 @@ test('Expo Go에서는 expo-notifications를 불러오지 않고 알림을 끈�
   let mod: typeof import('../reminder') | undefined;
   jest.isolateModules(() => { mod = require('../reminder'); });
   await expect(mod!.requestReminderPermission()).resolves.toBe(false);
-  await expect(mod!.scheduleReminder({ at: new Date(), title: 't', body: 'b' })).resolves.toBeUndefined();
+  await expect(mod!.replaceOwnedReminders([{ id: 'daily', hour: 19, title: 't', body: 'b' }])).resolves.toBeUndefined();
   jest.dontMock('expo-constants');
   jest.dontMock('expo-notifications');
 });

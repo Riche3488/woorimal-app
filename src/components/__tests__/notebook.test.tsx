@@ -31,8 +31,7 @@ function game(progress: Progress, toggleStarFn = jest.fn()): Game {
     pack: { questions } as unknown as AppPack, save,
     counts: notebookCounts(progress, questions, localDay(new Date())),
     lastRound: null, lastMode: 'normal', previousSave: null, lastPracticeType: null,
-    startNormal: jest.fn(), startReview: jest.fn(), startStarred: jest.fn(), startPractice: jest.fn(), startChallenge: jest.fn(),
-    toggleStar: toggleStarFn, complete: jest.fn(), answerCard: jest.fn(), updateCrossword: jest.fn(), makePuzzle: jest.fn(), updateSettings: jest.fn(), resetRecords: jest.fn(),
+    toggleStar: toggleStarFn, answerCard: jest.fn(), updateCrossword: jest.fn(), makePuzzle: jest.fn(), updateSettings: jest.fn(), resetRecords: jest.fn(),
   };
 }
 

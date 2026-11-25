@@ -6,15 +6,21 @@ type Diagnostics = {
   events: ExperienceEvent[];
 };
 let tail: Promise<unknown> = Promise.resolve();
+// 마지막으로 읽거나 쓴 켜짐 상태. 꺼져 있으면(기본) 이벤트마다 저장소를 읽지 않는다. null이면 아직 모름.
+let knownEnabled: boolean | null = null;
 async function read(): Promise<Diagnostics> {
   const raw = await AsyncStorage.getItem(KEY);
-  if (!raw) return {
-    enabled: false,
-    events: []
-  };
+  if (!raw) {
+    knownEnabled = false;
+    return {
+      enabled: false,
+      events: []
+    };
+  }
   const data = JSON.parse(raw);
+  knownEnabled = data.enabled === true;
   return {
-    enabled: data.enabled === true,
+    enabled: knownEnabled,
     events: Array.isArray(data.events) ? data.events : []
   };
 }
@@ -22,12 +28,16 @@ function update(fn: (data: Diagnostics) => Diagnostics): Promise<void> {
   const task = tail.then(async () => {
     const old = await read(),
       next = fn(old);
-    if (next !== old) await AsyncStorage.setItem(KEY, JSON.stringify(next));
+    if (next !== old) {
+      await AsyncStorage.setItem(KEY, JSON.stringify(next));
+      knownEnabled = next.enabled;
+    }
   });
   tail = task.catch(() => {});
   return task;
 }
 export async function recordExperienceEvent(event: ExperienceEvent): Promise<void> {
+  if (knownEnabled === false) return;
   await update(d => d.enabled ? {
     ...d,
     events: appendExperienceEvent(d.events, event, Date.now())

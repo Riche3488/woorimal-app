@@ -13,7 +13,6 @@ test('web_reminders_do_not_load_the_native_module_or_register_listeners', async 
   const reminder: typeof import('../reminder') = require('../reminder');
   expect(reminder.Notifications).toBeNull();
   await expect(reminder.requestReminderPermission()).resolves.toBe(false);
-  await expect(reminder.scheduleReminder(null)).resolves.toBeUndefined();
   await expect(reminder.replaceOwnedReminders([{ id: 'daily', hour: 19, title: 'title', body: 'body' }])).resolves.toBeUndefined();
 });
 

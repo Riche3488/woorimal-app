@@ -14,17 +14,17 @@ import { TEST_MODE_OK } from '../data/build';
 import { dailyProgress } from '../core/activity';
 import { pickChallenge } from '../core/challenge';
 import { withChoiceMode, choiceAvailability } from '../core/choices';
-import { addDays, currentStreak, localDay } from '../core/growth';
+import { localDay } from '../core/growth';
 import { pickReviewRound, pickRound, pickStarredRound, pickTypeRound } from '../core/picker';
 import { notebookCounts } from '../core/progress';
 import { reminderPlans, type ReminderSettings } from '../core/reminder';
 import type { Round, RoundResult } from '../core/round';
-import type { AppPack, AppQuestion, QuestionType } from '../core/types';
+import type { AppPack, QuestionType } from '../core/types';
 import { loadPack, refreshPack } from '../data/pack-store';
 import { replaceOwnedReminders } from '../data/reminder';
 import type { CrosswordProgress } from '../core/crossword';
 import { makeCrossword, type MadeLevel } from '../core/crossword-make';
-import { addMadeCrossword, backupBrokenSave, defaultSave, finishCard, finishRound, loadSaveResult, saveCrossword, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
+import { addMadeCrossword, backupBrokenSave, defaultSave, finishCard, loadSaveResult, toggleStarSave, writeSave, type RoundMode, type SaveData, type Settings } from '../data/save';
 export type Game = {
   sessions?: {
     begin(mode: RoundMode, type?: QuestionType, count?: number): Promise<SessionSnapshot>;
@@ -45,14 +45,8 @@ export type Game = {
   lastRound: Round | null;
   lastMode: RoundMode;
   previousSave: SaveData | null; // 결과 화면에서 레벨업·곳간 변화를 비교하려고 판 직전 저장을 둔다
-  startNormal(): AppQuestion[];
-  startReview(): AppQuestion[];
-  startStarred(): AppQuestion[];
-  startPractice(type: QuestionType): AppQuestion[];
   lastPracticeType: QuestionType | null;
   toggleStar(key: string): void;
-  startChallenge(): AppQuestion[]; // 오늘 날짜로 정해진 5문제
-  complete(round: Round, mode?: RoundMode): void;
   answerCard(result: RoundResult): Promise<SaveData>; // 저장 확인 뒤 피드백
   updateCrossword(id: string, progress: CrosswordProgress, grains: number, opts?: {
     usedChance?: boolean;
@@ -60,7 +54,7 @@ export type Game = {
     entryIndex?: number;
     submittedAt?: number;
   }): Promise<SaveData>; // 퍼즐 진행·낱알·초성 찬스
-  makePuzzle(level: MadeLevel): string | null; // 문제를 엮어 조합 퍼즐 한 판을 만들고 그 id를 돌려준다(못 만들면 null)
+  makePuzzle(level: MadeLevel): Promise<string | null>; // 조합 퍼즐 한 판을 만들어 저장한 뒤 그 id를 돌려준다(못 만들거나 저장 못 하면 null)
   updateSettings(patch: Partial<Settings>): void;
   resetRecords(): void; // 테스트 모드: 설정은 두고 낱알·판·기록을 처음으로
 };
@@ -244,28 +238,6 @@ export function GameProvider({
     return pack!;
   }, [pack]);
 
-  // 설정 "보기로 풀기"를 한 판에 적용한다(오늘의 문제 제외).
-  const choiceMode = save.settings.choiceMode;
-  const start = useCallback((pick: (questions: AppQuestion[]) => AppQuestion[]) => {
-    const questions = currentPack().questions;
-    return withChoiceMode(pick(questions), questions, choiceMode);
-  }, [currentPack, choiceMode]);
-  const startNormal = useCallback(() => start(qs => pickRound(qs, save.progress, {
-    now: Date.now()
-  })), [start, save.progress]);
-  const startReview = useCallback(() => start(qs => pickReviewRound(qs, save.progress, {
-    now: Date.now()
-  })), [start, save.progress]);
-  const startStarred = useCallback(() => start(qs => pickStarredRound(qs, save.progress, {
-    now: Date.now()
-  })), [start, save.progress]);
-  const startPractice = useCallback((type: QuestionType) => {
-    setLastPracticeType(type);
-    return start(qs => pickTypeRound(qs, save.progress, type, {
-      now: Date.now()
-    }));
-  }, [start, save.progress]);
-  const startChallenge = useCallback(() => pickChallenge(currentPack().questions, localDay(new Date())), [currentPack]);
   const sessions = useMemo(() => ({
     async begin(mode: RoundMode, type?: QuestionType, count?: number): Promise<SessionSnapshot> {
       await store.current!.flush();
@@ -389,16 +361,6 @@ export function GameProvider({
     }
   }), [currentPack, persist]);
 
-  // 함수형 갱신: 판 도중 누른 ⭐(toggleStar)가 판 결과 저장에 덮이지 않게 최신 저장 위에 쌓는다.
-  const complete = useCallback((round: Round, mode: RoundMode = 'normal') => {
-    const before = store.current?.current();
-    const submittedAt = new Date();
-    void persist(prev => finishRound(prev, round, submittedAt, mode)).then(() => {
-      if (before) setPreviousSave(before);
-    }).catch(() => {});
-    setLastRound(round);
-    setLastMode(mode);
-  }, [persist]);
   const toggleStar = useCallback((key: string) => {
     void persist(prev => toggleStarSave(prev, key)).catch(() => {});
   }, [persist]);
@@ -441,7 +403,7 @@ export function GameProvider({
   }, [persist, pack]);
 
   // 앞서 만든 판의 낱말은 되도록 피해서 새 낱말로 엮는다.
-  const makePuzzle = useCallback((level: MadeLevel) => {
+  const makePuzzle = useCallback(async (level: MadeLevel) => {
     if (!pack) return null;
     const num = 1 + Math.max(0, ...save.madeCrosswords.map(b => Number(/^made-(\d+)$/.exec(b.id)?.[1] ?? 0)));
     const avoid = new Set(save.madeCrosswords.flatMap(b => b.entries.map(e => e.answer)));
@@ -453,8 +415,12 @@ export function GameProvider({
       avoid
     });
     if (!board) return null;
-    void persist(prev => addMadeCrossword(prev, board)).catch(() => {});
-    return board.id;
+    try {
+      await persist(prev => addMadeCrossword(prev, board));
+      return board.id;
+    } catch {
+      return null;
+    }
   }, [pack, save.madeCrosswords, persist]);
   const counts = useMemo(() => pack ? notebookCounts(save.progress, pack.questions, today) : {
     review: 0,
@@ -522,13 +488,7 @@ export function GameProvider({
     lastMode,
     previousSave,
     lastPracticeType,
-    startNormal,
-    startReview,
-    startStarred,
-    startPractice,
     toggleStar,
-    startChallenge,
-    complete,
     answerCard,
     updateCrossword,
     makePuzzle,
