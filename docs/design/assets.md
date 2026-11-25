@@ -23,6 +23,7 @@
 | V1~V3 hero-1·2·3 | 홈 디오라마 | 곳간 단계별 반복 영상 | 1:1 5s 960 → 720px | Kling 3.0 std, 소리 없음 | 7.5×3 + 다시 만든 2편 15 | `hero-1/2/3.mp4` (71·71·77KB) + 정지 그림 `hero-1/2/3.webp` |
 | V4 levelup | 결과(레벨업) | 환호하며 낱알이 흩날림 | 1:1 5s 960 → 720px | Kling 3.0 std, 소리 없음 | 7.5 | `levelup.mp4` (235KB) + `levelup.webp` |
 | I1 icon-art | 앱 아이콘·favicon | 손 흔드는 다람쥐 상반신 | 1:1 2k | Nano Banana Pro | 2 | `assets/images/android-icon-*.png`, `icon.png`, `favicon.png` |
+| D1~D3 deco-leaf-flag·word-sign·acorn-basket | 홈 디오라마·곳간 낱말 | 곳간 장식(나뭇잎 깃발·낱말 팻말·도토리 바구니). 이전엔 코드로 그린 네모+글자 | 1:1 1k → Higgsfield 배경 제거 → 투명 320px | GPT Image 2.6 (A1·barn-2 참조) | 0.75×3 + 배경 제거 | `deco-*.webp` (16·14·25KB) |
 | (로컬) splash | 스플래시 | A1 잘라 쓰기 | 512px | — | 0 | `assets/images/splash-icon.png` |
 
 V2·V3은 처음 판에서 곳간 벽이 비어 보였다(위 3번의 배경 제거 문제). 원인을 고쳐 다시 합성하고 다시 만들었다.
@@ -38,6 +39,8 @@ V2·V3은 처음 판에서 곳간 벽이 비어 보였다(위 3번의 배경 제
 - **V1~V3**: seamless gentle idle loop, locked-off static camera; squirrel breathes, blinks, tail sways; granary perfectly still; returns exactly to the starting pose.
 - **V4**: squirrel hops with arms raised, gentle shower of golden grains, lands back in the starting pose.
 - **I1**: close-up bust of the same squirrel waving, rice bundle by its cheek, bold readable silhouette inside a centered circle.
+
+- **D1~D3** (2026-11-25): single small decorative prop for the granary diorama, same style as references — leaf pennant on a wooden pole in a clay mound / wooden signpost with hanji board and vermilion frame reading "가나다" / woven straw basket overflowing with acorns. 배경 제거는 rembg 대신 Higgsfield `remove_background`를 썼다.
 
 ## 대체 그림·실패 대응
 

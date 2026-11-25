@@ -1,8 +1,10 @@
 // 곳간 낱말: 외운 낱말(간격 복습을 마친 낱말)을 곳간에 쌓인 낟가리처럼 모아 보여 준다. 눌러서 해설 보기.
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ART } from '../../assets/art';
 import { wordCollection, discoveredWords } from '../core/collection';
 import { DECORATIONS, type DecorationId } from '../core/decorations';
 import { useGame } from '../state/GameProvider';
@@ -61,9 +63,9 @@ export default function Collection() {
         return <Pressable key={id} accessibilityRole="button" accessibilityState={{
           disabled: !unlocked,
           selected: equipped
-        }} disabled={!unlocked} onPress={() => game.equipDecoration?.(id)} style={[s.detail, {
+        }} disabled={!unlocked} onPress={() => game.equipDecoration?.(id)} style={[s.detail, s.decoRow, {
           opacity: unlocked ? 1 : 0.6
-        }]}><Text style={s.detailWord}>{item.name}{equipped ? ' · 장착 중' : ''}</Text><Text style={s.detailText}>{unlocked ? '눌러서 곳간에 장착해요' : item.condition}</Text></Pressable>;
+        }]}><Image source={ART.decoration[id]} style={[s.decoThumb, !unlocked && s.decoLocked]} contentFit="contain" accessible={false} /><View style={s.decoText}><Text style={s.detailWord}>{item.name}{equipped ? ' · 장착 중' : ''}</Text><Text style={s.detailText}>{unlocked ? '눌러서 곳간에 장착해요' : item.condition}</Text></View></Pressable>;
       })}
         {save.decorations.equipped && <Pressable accessibilityRole="button" onPress={() => game.equipDecoration?.(null)} style={s.chip}><Text>장식 해제</Text></Pressable>}
       </ScrollView>
@@ -160,5 +162,21 @@ const s = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: C.sub
+  },
+  decoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14
+  },
+  decoThumb: {
+    width: 64,
+    height: 64
+  },
+  decoLocked: {
+    opacity: 0.35
+  },
+  decoText: {
+    flex: 1,
+    gap: 4
   }
 });

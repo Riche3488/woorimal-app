@@ -11,6 +11,11 @@ export const ART = {
   levelUp: require('./levelup.webp'),
   acorn: require('./acorn.webp'),
   grain: require('./grain.webp'),
+  decoration: {
+    'leaf-flag': require('./deco-leaf-flag.webp'),
+    'word-sign': require('./deco-word-sign.webp'),
+    'acorn-basket': require('./deco-acorn-basket.webp'),
+  },
 } as const;
 
 export const VIDEO = {
