@@ -116,6 +116,11 @@
 - [x] **AAB 다시 빌드**(versionCode 4, 2026-11-21): versionCode 3에는 설정 출처의 AI 그림 표시(커밋 88c99b5)가 없다. `npx eas-cli build --platform android --profile production`(번호는 EAS가 4로 올림). 이 AAB를 내부 테스트에 올린다
 - [x] **AAB 1.0.0(5) 빌드**(2026-11-24, 커밋 c5f9674, EAS 빌드 1286590a): 플레이 경험 개선(PR #1)이 들어간 첫 출시 빌드. 완료(17:28). AAB를 받아 확인: 패키지 `kr.co.woorimalcontest.app`, 개발 클라이언트 없음, 권한은 1.0.0(4)와 같음. 받기: `npx.cmd eas-cli build:view 1286590a-0556-4973-8fac-d6bc75249dad`의 Application Archive URL
 - [x] **AAB 1.0.0(6) 빌드**(2026-11-24, 커밋 c0e1539, EAS 빌드 93bb9ed0): (5)를 비공개 테스트에 올리자 Play Console이 "필수 하드웨어 기능 선언으로 인해 앱의 사용 가능 여부가 제한됨(`android.hardware.screen.portrait`)"으로 검토 전송을 막았다. `orientation: portrait`가 이 기능을 필수로 추정하게 만든 것이라, 세로 고정은 두고 `uses-feature required="false"`를 넣는 `plugins/with-optional-portrait.js`를 더함. Console의 (5) 초안은 지우고 (6)을 올린다. 완료(19:46). AAB 매니페스트에 `uses-feature android.hardware.screen.portrait`(required 속성) 들어감, 패키지 그대로·개발 클라이언트 없음. 받기: `npx.cmd eas-cli build:view 93bb9ed0-1cc5-4eac-aebc-7b7060f8740e`
+- [x] **AAB 1.0.0(7) 빌드**(2026-11-25, 커밋 28b4167, EAS 빌드 a3e649b0): 곳간 장식 12종·3자리 장착·장식 도감과 출시 전 코드 리뷰 반영(저장 나누기 등)이 들어감. 완료(17:29), 72MB. AAB 매니페스트 확인: 패키지 `kr.co.woorimalcontest.app`, `uses-feature android.hardware.screen.portrait` 들어감, 권한은 (6)과 같음(의존성 변화 없음), 개발 실행기는 릴리스용 빈 클래스(`DevLauncherPackage`)뿐. 받기: `npx.cmd eas-cli build:view a3e649b0-c56b-4546-9c38-6fee763af93d`. Console의 (6)이 검토 전이면 지우고 (7)을 올린다
+- [ ] **1.0.0(7) 실기기 확인**(아래 (6) 목록 전부 + 다음):
+  - [ ] 1.0.0(4)/(6)을 쓰던 기기에서 업데이트 → 낱알·오답노트·도감·장식이 그대로(저장 형식을 조각으로 옮기는 첫 실행)
+  - [ ] 장식 장착/해제·세 자리·새 장식 NEW 표시·결과 화면 장식 카드
+  - [ ] 설정 알림 빈도(매일·주 3회) 선택 표시
 - [ ] **1.0.0(6) 실기기 확인**(내부 테스트 링크로 Play에서 설치). 이번에 새로 볼 것:
   - [ ] 홈 "가볍게 5문제" → 5문제·하트/시간 없음, 하루 5개 목표 도장
   - [ ] 풀이 중 홈으로 나갔다가 앱을 완전히 끄고 다시 열기 → "이어 하기"로 같은 문제 복구
