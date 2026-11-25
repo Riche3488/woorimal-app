@@ -7,6 +7,7 @@ import { ART } from '../../assets/art';
 import { DECORATION_IDS, DECORATIONS, RARITY_LABEL, SLOTS, decorationProgress, newDecorations, type Rarity } from '../core/decorations';
 import { useGame } from '../state/GameProvider';
 import { C, paperCard, R, T } from '../ui/theme';
+const FULL_HINT = '자리가 꽉 찼어요. 곳간에 있는 장식을 눌러 하나를 빼 주세요.';
 const RARITY_COLOR: Record<Rarity, string> = { common: C.sub, rare: C.good, epic: C.accent };
 export function DecorationAlbum() {
   const game = useGame();
@@ -39,10 +40,13 @@ export function DecorationAlbum() {
         return <Pressable key={id} accessibilityRole="button" accessibilityState={{ disabled: !p.done, selected: on }}
           accessibilityLabel={`${p.done ? item.name : '잠긴 장식'}, ${RARITY_LABEL[item.rarity]}, ${p.done ? status : `${item.condition} ${p.current}/${p.target}`}${isNew ? ', 새로 얻음' : ''}`}
           disabled={!p.done} onPress={() => {
-            if (!on && used >= SLOTS) return setHint('자리가 꽉 찼어요. 곳간에 있는 장식을 눌러 하나를 빼 주세요.');
+            if (!on && used >= SLOTS) return setHint(FULL_HINT);
             setHint(null);
-            if (on) game.unequipDecoration?.(id);
-            else game.equipDecoration?.(id);
+            if (on) return game.unequipDecoration?.(id);
+            // 화면의 빈 자리 수는 한 박자 늦을 수 있어, 마지막 저장에서 거절되면 그때 안내한다.
+            void game.equipDecoration?.(id).then(ok => {
+              if (!ok) setHint(FULL_HINT);
+            });
           }} style={[s.card, on && s.cardOn]}>
             {isNew && <View style={s.newPill}><Text style={s.newText}>NEW</Text></View>}
             <Image source={ART.decoration[id]} style={[s.thumb, !p.done && s.locked]} tintColor={p.done ? undefined : C.faint} contentFit="contain" accessible={false} />

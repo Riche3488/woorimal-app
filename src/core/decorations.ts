@@ -12,7 +12,7 @@ type Def = { name: string; condition: string; rarity: Rarity; target: number; me
 const goalDays = (s: SaveData) => Object.keys(s.activity).filter(day => dailyProgress(s.activity, day).complete).length;
 const discovered = (s: SaveData) => Object.keys(s.discoveries).length;
 const mastered = (s: SaveData) => Object.values(s.discoveries).filter(w => w.masteredAt !== undefined).length;
-const puzzleWords = (s: SaveData) => Object.values(s.crosswords).reduce((n, c) => n + new Set(c.solved).size, 0);
+const puzzleWords = (s: SaveData) => (s.puzzleWordsRetired ?? 0) + Object.values(s.crosswords).reduce((n, c) => n + new Set(c.solved).size, 0);
 // 저장된 streak.days는 다음 갱신 전까지 끊긴 기록도 남아 있어 홈과 같은 '지금 연속'을 쓴다.
 const streakNow = (s: SaveData, today: string) => currentStreak(s.streak, today);
 

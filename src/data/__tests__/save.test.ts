@@ -557,6 +557,14 @@ test('addMadeCrossword: 만든 판을 앞에 두고, 너무 많으면 오래된 
   expect(d.madeCrosswords[0].id).toBe('made-99');
   expect(d.madeCrosswords.some(b => b.id === 'made-3')).toBe(false);
   expect(d.crosswords['made-3']).toBeUndefined();
+  // 지운 판에서 맞힌 낱말 수는 따로 남겨, 장식 진행도가 줄지 않는다.
+  expect(d.puzzleWordsRetired).toBe(1);
+});
+test('puzzleWordsRetired: 저장을 다시 읽어도 남고, 깨진 값은 0으로 본다', async () => {
+  await writeSave({ ...defaultSave(), puzzleWordsRetired: 7 });
+  expect((await loadSave()).puzzleWordsRetired).toBe(7);
+  await writeSave({ ...defaultSave(), puzzleWordsRetired: -3 } as never);
+  expect((await loadSave()).puzzleWordsRetired ?? 0).toBe(0);
 });
 test('만든 판·초성 기록을 읽고, 깨진 판은 버린다. 예전 저장에는 빈 목록', async () => {
   await AsyncStorage.setItem(SAVE_KEY, JSON.stringify({

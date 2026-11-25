@@ -43,3 +43,12 @@ test('full_slots_show_hint_instead_of_equipping', async () => {
   expect(unequipDecoration).toHaveBeenCalledWith('kite');
   expect(equipDecoration).not.toHaveBeenCalled();
 });
+
+test('hint_appears_when_latest_save_refuses_equip_even_if_screen_showed_a_free_slot', async () => {
+  // 화면에는 빈 자리가 보이지만, 앞서 누른 장식이 이미 마지막 자리를 채운 경우
+  const equipDecoration = jest.fn().mockResolvedValue(false);
+  await render(<GameContextProvider value={game(saveWith(['leaf-flag', 'word-sign', 'kite', 'magpie'], ['leaf-flag', 'word-sign', null]), { equipDecoration })}><DecorationAlbum /></GameContextProvider>);
+  await fireEvent.press(screen.getByLabelText(/^까치/));
+  expect(equipDecoration).toHaveBeenCalledWith('magpie');
+  expect(await screen.findByText(/자리가 꽉 찼어요/)).toBeTruthy();
+});

@@ -60,6 +60,8 @@ test('new_conditions_unlock_from_existing_records', () => {
   expect(evaluateUnlocks(save, '2026-11-30')).not.toContain('stone-lantern');
   // 같은 낱말을 두 번 센 퍼즐 기록은 한 번만 센다.
   expect(decorationProgress({ ...s, crosswords: { a: { solved: [1, 1, 1, 2], revealed: {}, helps: 0 } } }, 'kite').current).toBe(2);
+  // 정리돼 지운 퍼즐에서 맞힌 낱말도 센다.
+  expect(decorationProgress({ ...s, puzzleWordsRetired: 6, crosswords: { a: { solved: [1, 2], revealed: {}, helps: 0 } } }, 'kite').current).toBe(8);
 });
 test('progress_reports_current_toward_target_and_caps_at_target', () => {
   const s = defaultSave();

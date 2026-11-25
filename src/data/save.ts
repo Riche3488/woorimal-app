@@ -47,6 +47,7 @@ export type SaveData = {
   chance: ChanceState;
   crosswords: Record<string, CrosswordProgress>;
   madeCrosswords: AppCrossword[];
+  puzzleWordsRetired?: number; // 오래돼 지운 만든 퍼즐에서 맞힌 낱말 수(장식 진행도가 줄지 않게 남긴다)
   progress: Progress;
   settings: Settings;
   activeSession: SessionSnapshot | null;
@@ -139,8 +140,12 @@ export function addMadeCrossword(d: SaveData, board: AppCrossword): SaveData {
   const kept = [board, ...d.madeCrosswords.filter(b => b.id !== board.id)];
   const dropped = new Set(kept.slice(MADE_KEEP).map(b => b.id));
   const crosswords = Object.fromEntries(Object.entries(d.crosswords).filter(([id]) => !dropped.has(id)));
+  const retired = Object.entries(d.crosswords).filter(([id]) => dropped.has(id)).reduce((n, [, c]) => n + new Set(c.solved).size, 0);
   return {
     ...d,
+    ...(retired > 0 ? {
+      puzzleWordsRetired: (d.puzzleWordsRetired ?? 0) + retired
+    } : {}),
     madeCrosswords: kept.slice(0, MADE_KEEP),
     crosswords
   };
@@ -313,6 +318,8 @@ export async function loadSaveResult(): Promise<SaveLoadResult> {
         chance: readChance(data.chance),
         crosswords: readCrosswords(data.crosswords),
         madeCrosswords: Array.isArray(data.madeCrosswords) ? data.madeCrosswords.filter(validCrossword) : [],
+        // 위에서 ...data로 들어온 값을 덮어쓴다(깨진 값은 버린다).
+        puzzleWordsRetired: Number.isInteger(data.puzzleWordsRetired) && data.puzzleWordsRetired > 0 ? data.puzzleWordsRetired : undefined,
         settings: {
           ...base.settings,
           ...data.settings,

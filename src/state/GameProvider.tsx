@@ -32,7 +32,7 @@ export type Game = {
     finish(id: string): Promise<void>;
     discard(id: string): Promise<void>;
   };
-  equipDecoration?(id: DecorationId): void; // 빈 자리에 놓는다(이미 있으면 그대로)
+  equipDecoration?(id: DecorationId): Promise<boolean>; // 빈 자리에 놓는다(이미 있으면 그대로). 마지막 저장 기준으로 놓였는지 돌려준다
   unequipDecoration?(id: DecorationId): void;
   unequipDecorations?(): void;
   markDecorationsSeen?(): void;
@@ -490,9 +490,7 @@ export function GameProvider({
     save,
     sessions,
     today,
-    equipDecoration: id => {
-      void persist(d => equipDecoration(d, id)).catch(() => {});
-    },
+    equipDecoration: id => persist(d => equipDecoration(d, id)).then(next => next.decorations.equipped.includes(id), () => true),
     unequipDecoration: id => {
       void persist(d => unequipDecoration(d, id)).catch(() => {});
     },
